@@ -14,7 +14,7 @@
     .controls input[type=range], .controls button, .controls select { font-size: 14px; text-transform: uppercase; cursor: pointer; padding: 6px 12px; border-radius: 6px; border: 1px solid #ccc; background: #eee; color: #000; }
     .switch-btn, .scale-btn { min-width: 50px; height: 40px; }
     .scale-btn.active { background: #ccc; }
-    .moodboard { width: 100%; max-width: 1400px; padding: 0px; border-radius: 0px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+    .moodboard { background: var(--bg-color); width: 100%; max-width: 1400px; padding: 20px; border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
     #canvas { width: 100%; aspect-ratio: 4/3; background: var(--bg-color); overflow: auto; position: relative; }
     .grid { display: flex; width: 100%; height: 100%; gap: var(--gap,20px); }
     .grid-column, .grid-row { display: flex; gap: var(--gap,20px); }
@@ -241,34 +241,6 @@ function createCell(parent) {
   item.append(wrapper, input);
   parent.append(item);
 }
-document.querySelector('[data-scale="3"]').disabled = true;
-document.querySelector('[data-scale="4"]').disabled = true;
-const originalWidth = canvas.offsetWidth;
-canvas.style.width = "1000px"; // ou une largeur raisonnable
-const cnv = await html2canvas(canvas, {
-  scale: exportScale,
-  useCORS: true,
-  allowTaint: false
-});
-canvas.style.width = originalWidth + "px"; // réinitialiser après
-reader.onload = () => {
-  const img = new Image();
-  img.onload = () => {
-    // canvas temporaire pour compression
-    const off = document.createElement('canvas');
-    const maxW = 800; // ou autre limite
-    const ratio = img.height / img.width;
-    off.width = maxW;
-    off.height = maxW * ratio;
-    off.getContext('2d').drawImage(img, 0, 0, off.width, off.height);
-    const compressed = off.toDataURL('image/jpeg', 0.8); // compression JPG
-
-    wrapper.dataset.ratio = ratio;
-    wrapper.style.backgroundImage = `url(${compressed})`;
-    // etc.
-  };
-  img.src = reader.result;
-};
 
 function createGrid(){
   grid.innerHTML='';
@@ -306,11 +278,7 @@ createGrid();
 
 dlBtn.addEventListener('click', async ()=>{
   try{
-    const cnv = await html2canvas(canvas, {
-  scale: exportScale,
-  useCORS: true,
-  allowTaint: false
-});
+    const cnv=await html2canvas(canvas,{scale:exportScale});
     const fmt=fmtSelect.value;
     if(fmt==='pdf'){
       const img=cnv.toDataURL('image/png');
