@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Convertisseur PNG en SVG</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Montserrat', sans-serif; background: #f2f2f2; color: #333; display: flex; flex-direction: column; align-items: center; padding: 20px; min-height: 100vh; }
+    main { width: 100%; max-width: 800px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+    .controls { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; align-items: center; width: 100%; }
+    .control-group { display: flex; flex-direction: column; font-size: 0.9rem; }
+    .control-group label { margin-bottom: 4px; }
+    .range-number { display: flex; align-items: center; gap: 8px; }
+    .range-number input[type="range"] { flex: 1; }
+    .range-number input[type="number"] { width: 50px; }
+    .controls button { flex: 1 1 140px; font-size: 0.9rem; background: #fff; border: 1px solid #ddd; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); cursor: pointer; transition: box-shadow 0.2s; padding: 10px; }
+    .controls button:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    #previewContainer { display: flex; flex-wrap: wrap; gap: 20px; width: 100%; justify-content: center; }
+    .previewBox { background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); flex: 1 1 45%; position: relative; height: 250px; overflow: hidden; }
+    .previewBox h3 { text-align: center; padding-top: 8px; font-weight: 500; }
+    .previewBox canvas, .previewBox svg { position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - 32px); object-fit: contain; }
+    #imageLoader { display: none; }
+    @media (max-width: 768px) { .controls { gap: 10px; } .controls button, .control-group { flex: 1 1 100%; } }
+    @media (max-width: 480px) { main { padding: 15px; } .previewBox { height: 200px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="controls">
+      <button id="chooseFileBtn">Choisir un fichier</button>
+      <div class="control-group">
+        <label for="contrastSlider">Contraste</label>
+        <div class="range-number">
+          <input type="range" id="contrastSlider" min="-100" max="100" value="0">
+          <input type="number" id="contrastNumber" min="-100" max="100" value="0">
+        </div>
+      </div>
+      <div class="control-group">
+        <label for="thresholdSlider">Seuil N&amp;B</label>
+        <div class="range-number">
+          <input type="range" id="thresholdSlider" min="0" max="255" value="128">
+          <input type="number" id="thresholdNumber" min="0" max="255" value="128">
+        </div>
+      </div>
+      <div class="control-group">
+        <label for="bwMode">Mode N&amp;B</label>
+        <input type="checkbox" id="bwMode">
+      </div>
+      <button id="vectorizeBtn">Vectoriser</button>
+      <button id="resetBtn">Retour</button>
+      <button id="downloadBtn">Télécharger SVG</button>
+    </div>
+    <input type="file" id="imageLoader" accept="image/*">
+    <div id="previewContainer">
+      <div class="previewBox"><h3>Original</h3><canvas id="originalCanvas"></canvas></div>
+      <div class="previewBox" id="filteredPreview"><h3>Filtré</h3><canvas id="previewCanvas"></canvas></div>
+    </div>
+  </main>
+
+  <script src="https://unpkg.com/imagetracerjs@1.2.6/imagetracer_v1.2.6.js"></script>
+  <script>
+    const imageLoader = document.getElementById('imageLoader');
+    const chooseFileBtn = document.getElementById('chooseFileBtn');
+    const vectorizeBtn = document.getElementById('vectorizeBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const contrastSlider = document.getElementById('contrastSlider');
+    const contrastNumber = document.getElementById('contrastNumber');
+    const thresholdSlider = document.getElementById('thresholdSlider');
+    const thresholdNumber = document.getElementById('thresholdNumber');
+    const bwMode = document.getElementById('bwMode');
+    const originalCanvas = document.getElementById('originalCanvas');
+    const previewCanvas = document.getElementById('previewCanvas');
+    const filteredPreview = document.getElementById('filteredPreview');
+    const ctxOriginal = originalCanvas.getContext('2d');
+    const ctx = previewCanvas.getContext('2d');
+    let image = new Image(), lastSVG = '', originalDataUrl = null;
+
+    chooseFileBtn.addEventListener('click', () => imageLoader.click());
+    imageLoader.addEventListener('change', handleFile);
+
+    function handleFile(e) {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        originalDataUrl = ev.target.result;
+        image.onload = () => setupCanvases();
+        image.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function setupCanvases() {
+      const w = originalCanvas.parentElement.clientWidth;
+      const h = originalCanvas.parentElement.clientHeight;
+      originalCanvas.width = previewCanvas.width = w;
+      originalCanvas.height = previewCanvas.height = h;
+      drawContain(ctxOriginal, image, originalCanvas);
+      drawContain(ctx, image, previewCanvas);
+      clearSVG();
+      enablePanZoom(originalCanvas);
+      enablePanZoom(previewCanvas);
+    }
+
+    function sync(rangeEl, numEl) {
+      rangeEl.addEventListener('input', () => { numEl.value = rangeEl.value; applyFilters(); });
+      numEl.addEventListener('input', () => {
+        let v = Number(numEl.value);
+        v = Math.min(Math.max(v, Number(rangeEl.min)), Number(rangeEl.max));
+        rangeEl.value = v;
+        applyFilters();
+      });
+    }
+    sync(contrastSlider, contrastNumber);
+    sync(thresholdSlider, thresholdNumber);
+    contrastSlider.addEventListener('input', applyFilters);
+    thresholdSlider.addEventListener('input', applyFilters);
+    bwMode.addEventListener('change', applyFilters);
+
+    function applyFilters() {
+      const c = +contrastSlider.value, t = +thresholdSlider.value;
+      drawContain(ctx, image, previewCanvas);
+      const data = ctx.getImageData(0, 0, previewCanvas.width, previewCanvas.height);
+      const arr = data.data, f = (259*(c+255))/(255*(259-c));
+      for (let i = 0; i < arr.length; i += 4) {
+        arr[i] = f*(arr[i]-128)+128;
+        arr[i+1] = f*(arr[i+1]-128)+128;
+        arr[i+2] = f*(arr[i+2]-128)+128;
+        if (bwMode.checked) {
+          const avg = (arr[i]+arr[i+1]+arr[i+2]) / 3;
+          const v = avg < t ? 0 : 255;
+          arr[i] = arr[i+1] = arr[i+2] = v;
+        }
+      }
+      ctx.putImageData(data, 0, 0);
+      vectorize();
+    }
+
+    function drawContain(ctx, img, canvas) {
+      const cw = canvas.width, ch = canvas.height;
+      const iw = img.width, ih = img.height;
+      const scale = Math.min(cw/iw, ch/ih);
+      const sw = iw * scale, sh = ih * scale;
+      const dx = (cw - sw) / 2, dy = (ch - sh) / 2;
+      ctx.clearRect(0, 0, cw, ch);
+      ctx.drawImage(img, 0, 0, iw, ih, dx, dy, sw, sh);
+    }
+
+    function enablePanZoom(el) {
+      let dragging = false, sx, sy, ox = 0, oy = 0, zoom = 1;
+      el.style.transformOrigin = 'center center';
+      el.addEventListener('wheel', e => {
+        e.preventDefault(); zoom += e.deltaY < 0 ? 0.1 : -0.1;
+        zoom = Math.max(0.5, Math.min(zoom, 10));
+        el.style.transform = `translate(${ox}px,${oy}px) scale(${zoom})`;
+      });
+      el.addEventListener('mousedown', e => { dragging = true; sx = e.clientX - ox; sy = e.clientY - oy; el.style.cursor = 'grabbing'; });
+      window.addEventListener('mousemove', e => { if (!dragging) return; ox = e.clientX - sx; oy = e.clientY - sy; el.style.transform = `translate(${ox}px,${oy}px) scale(${zoom})`; });
+      window.addEventListener('mouseup', () => { dragging = false; el.style.cursor = 'grab'; });
+    }
+
+    function vectorize() {
+      if (!originalDataUrl) return;
+      const imageData = ctx.getImageData(0, 0, previewCanvas.width, previewCanvas.height);
+      lastSVG = ImageTracer.imagedataToSVG(imageData, { ltres:1, qtres:1, numberofcolors:4, colorquantcycles:3, pathomit:1, strokewidth:0 });
+      const svgEl = new DOMParser().parseFromString(lastSVG, 'image/svg+xml').documentElement;
+      clearSVG();
+      filteredPreview.appendChild(svgEl);
+    }
+
+    function clearSVG() {
+      const existing = filteredPreview.querySelector('svg');
+      if (existing) existing.remove();
+    }
+
+    function resetImage() {
+      if (!originalDataUrl) return;
+      image.src = originalDataUrl;
+      contrastSlider.value = contrastNumber.value = 0;
+      thresholdSlider.value = thresholdNumber.value = 128;
+      bwMode.checked = false;
+      clearSVG();
+      image.onload = () => setupCanvases();
+    }
+
+    function downloadSVG() {
+      if (!lastSVG) return alert("Vectorise d'abord !");
+      const blob = new Blob([lastSVG], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'image.svg';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    vectorizeBtn.addEventListener('click', vectorize);
+    resetBtn.addEventListener('click', resetImage);
+    downloadBtn.addEventListener('click', downloadSVG);
+  </script>
+</body>
+</html>
