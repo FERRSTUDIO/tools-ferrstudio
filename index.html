@@ -278,7 +278,11 @@ createGrid();
 
 dlBtn.addEventListener('click', async ()=>{
   try{
-    const cnv=await html2canvas(canvas,{scale:exportScale});
+    const cnv = await html2canvas(canvas, {
+  scale: exportScale,
+  useCORS: true,
+  allowTaint: false
+});
     const fmt=fmtSelect.value;
     if(fmt==='pdf'){
       const img=cnv.toDataURL('image/png');
