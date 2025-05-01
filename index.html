@@ -243,12 +243,12 @@ function createCell(parent) {
 }
 
 function createGrid(){
-  grid.innerHTML='';
+  grid.innerHTML=''; 
   const cols=+colSlider.value, rows=+rowSlider.value, gap=+gapSlider.value, off=+offsetSlider.value, margin=+marginSlider.value;
   document.documentElement.style.setProperty('--gap',gap+'px');
   canvas.style.borderRadius=radiusSlider.value+'px';
   canvas.style.padding=margin+'px';
-
+  
   if(offsetType==='vertical'){
     grid.style.flexDirection='row';
     for(let c=0;c<cols;c++){
@@ -274,32 +274,43 @@ function createGrid(){
   }
   saveState();
 }
+
 createGrid();
 
-dlBtn.addEventListener('click', async ()=>{
-  try{
-    const cnv=await html2canvas(canvas,{scale:exportScale});
-    const fmt=fmtSelect.value;
-    if(fmt==='pdf'){
-      const img=cnv.toDataURL('image/png');
-      const{jsPDF}=window.jspdf;
-      const doc=new jsPDF({unit:'px',format:[cnv.width,cnv.height]});
-      doc.addImage(img,'PNG',0,0,cnv.width,cnv.height);
+dlBtn.addEventListener('click', async () => {
+  try {
+    const cnv = await html2canvas(canvas, { scale: exportScale });
+    const fmt = fmtSelect.value;
+
+    // PDF
+    if (fmt === 'pdf') {
+      const img = cnv.toDataURL('image/png');
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'px', format: [cnv.width, cnv.height] });
+      doc.addImage(img, 'PNG', 0, 0, cnv.width, cnv.height);
       doc.save('moodboard.pdf');
     } else {
-      cnv.toBlob(blob=>{
-        if(!blob){ alert('Erreur: impossible de générer le fichier'); return; }
-        const url=URL.createObjectURL(blob);
-        const link=document.createElement('a');
-        link.href=url;
-        link.download=`moodboard.${fmt}`;
+      // Fichier Blob dynamique
+      const mimeType = fmt === 'jpg' ? 'image/jpeg' : `image/${fmt}`;
+      cnv.toBlob(blob => {
+        if (!blob) {
+          alert('Erreur: impossible de générer le fichier');
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `moodboard.${fmt}`;
         document.body.append(link);
         link.click();
         link.remove();
         URL.revokeObjectURL(url);
-      }, fmt==='jpg'?'image/jpeg':`image/${fmt}`);
+      }, mimeType);
     }
-  }catch(e){ console.error(e); alert('Échec export, réessayez'); }
+  } catch (e) {
+    console.error(e);
+    alert('Échec de l\'export, réessayez');
+  }
 });
 </script>
 </body>
