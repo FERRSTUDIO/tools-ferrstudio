@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Vidéo Ferr Studio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: black;
+      overflow: hidden;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  </style>
+</head>
+<body>
+
+<video
+  id="bg-video"
+  autoplay
+  muted
+  loop
+  playsinline
+  preload="auto">
+  <source src="https://cdn.jsdelivr.net/gh/FERRSTUDIO/tools-ferrstudio/Studio-solution-digitale-3d.webm" type="video/webm">
+  Votre navigateur ne supporte pas la vidéo.
+</video>
+
+<script>
+  window.addEventListener('load', () => {
+    const video = document.getElementById('bg-video');
+    video.play().catch(e => {
+      console.warn("Autoplay bloqué :", e);
+    });
+  });
+</script>
+
+</body>
+</html>
