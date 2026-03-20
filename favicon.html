@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Générateur de Favicon</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f5f7;
+      --card: #ffffff;
+      --border: #e5e5ea;
+      --text: #1d1d1f;
+      --text2: #6e6e73;
+      --accent: #0071e3;
+      --accent-hover: #0077ed;
+      --shadow: 0 2px 12px rgba(0,0,0,0.08);
+      --shadow-hover: 0 4px 20px rgba(0,0,0,0.12);
+      --radius: 14px;
+      --radius-sm: 10px;
+      --transition: 0.2s ease;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Montserrat', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Header */
+    .header { text-align: center; padding: 8px 0; }
+    .header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+    .header p { font-size: 0.8rem; color: var(--text2); margin-top: 2px; }
+
+    /* Drop Zone */
+    .dropzone {
+      background: var(--card);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 32px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color var(--transition), background var(--transition), box-shadow var(--transition);
+    }
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--accent);
+      background: #f0f7ff;
+      box-shadow: var(--shadow);
+    }
+    .dropzone.has-image {
+      padding: 16px;
+      border-style: solid;
+    }
+    .dropzone-icon { width: 40px; height: 40px; margin: 0 auto 10px; opacity: 0.4; }
+    .dropzone-text { font-size: 0.9rem; font-weight: 500; }
+    .dropzone-sub { font-size: 0.75rem; color: var(--text2); margin-top: 4px; }
+    .dropzone-preview { display: none; align-items: center; gap: 12px; justify-content: center; }
+    .dropzone-preview.visible { display: flex; }
+    .dropzone-preview img { width: 48px; height: 48px; object-fit: contain; border-radius: 8px; background: repeating-conic-gradient(#f0f0f0 0% 25%, #fff 0% 50%) 50% / 8px 8px; }
+    .dropzone-preview .file-name { font-size: 0.8rem; font-weight: 500; color: var(--accent); }
+    .dropzone-preview .remove-btn {
+      background: none; border: none; color: #ff3b30; cursor: pointer;
+      font-size: 0.8rem; font-weight: 600; padding: 2px 6px; border-radius: 4px;
+    }
+    .dropzone-preview .remove-btn:hover { background: #fff0f0; }
+    .dropzone-empty { display: block; }
+    .dropzone.has-image .dropzone-empty { display: none; }
+    #fileInput { display: none; }
+
+    /* Controls */
+    .controls-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      display: none;
+    }
+    .controls-card.visible { display: block; }
+    .controls-card h2 {
+      font-size: 0.85rem; font-weight: 600; margin-bottom: 12px;
+      color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+    }
+    .control-item { display: flex; flex-direction: column; gap: 6px; }
+    .control-item label { font-size: 0.75rem; font-weight: 500; color: var(--text2); }
+    .control-item .slider-row { display: flex; align-items: center; gap: 8px; }
+    .control-item input[type="range"] {
+      flex: 1; height: 4px; -webkit-appearance: none; appearance: none;
+      background: var(--border); border-radius: 2px; outline: none;
+    }
+    .control-item input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+      background: var(--accent); cursor: pointer; border: 2px solid #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .control-item input[type="number"] {
+      width: 48px; padding: 4px 6px; border: 1px solid var(--border);
+      border-radius: 6px; font-size: 0.75rem; font-family: inherit; text-align: center; outline: none;
+    }
+    .control-item input[type="number"]:focus { border-color: var(--accent); }
+    .control-item input[type="text"] {
+      padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.8rem; font-family: inherit; outline: none; width: 100%;
+    }
+    .control-item input[type="text"]:focus { border-color: var(--accent); }
+    .control-item input[type="color"] {
+      width: 100%; height: 36px; border: 1px solid var(--border); border-radius: 8px;
+      cursor: pointer; padding: 2px;
+    }
+    .control-item select {
+      padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.8rem; font-family: inherit; outline: none; background: #fff; cursor: pointer;
+    }
+
+    /* Preview Section */
+    .preview-section { display: none; flex-direction: column; gap: 12px; }
+    .preview-section.visible { display: flex; }
+
+    .preview-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .preview-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .preview-card-label {
+      padding: 8px 12px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border); background: #fafafa;
+    }
+
+    /* Live Preview - Browser Tab Mockup */
+    .browser-mockup {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .tab-bar {
+      display: flex;
+      align-items: center;
+      background: #f0f0f3;
+      border-radius: 10px;
+      padding: 8px 12px;
+      gap: 8px;
+      width: 100%;
+      max-width: 320px;
+    }
+    .tab-favicon {
+      width: 16px; height: 16px; border-radius: 3px;
+      background: repeating-conic-gradient(#ddd 0% 25%, #eee 0% 50%) 50% / 4px 4px;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .tab-favicon img { width: 100%; height: 100%; object-fit: contain; }
+    .tab-title { font-size: 0.7rem; color: var(--text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tab-dots { margin-left: auto; display: flex; gap: 3px; }
+    .tab-dots span { width: 4px; height: 4px; background: #bbb; border-radius: 50%; }
+
+    /* Mobile mockup */
+    .mobile-mockup {
+      width: 70px; height: 70px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 4px;
+    }
+    .mobile-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: repeating-conic-gradient(#ddd 0% 25%, #eee 0% 50%) 50% / 6px 6px;
+      overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .mobile-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .mobile-label { font-size: 0.55rem; color: var(--text2); text-align: center; }
+
+    /* Icons Grid */
+    .icons-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 10px;
+      padding: 16px;
+    }
+    .icon-thumb {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+      background: repeating-conic-gradient(#f8f8f8 0% 25%, #fff 0% 50%) 50% / 8px 8px;
+    }
+    .icon-thumb img { max-width: 100%; height: auto; image-rendering: pixelated; }
+    .icon-thumb span { font-size: 0.6rem; color: var(--text2); font-weight: 500; }
+
+    /* Snippet */
+    .snippet-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      display: none;
+    }
+    .snippet-card.visible { display: block; }
+    .snippet-card label {
+      font-size: 0.75rem; font-weight: 500; color: var(--text2);
+      display: block; margin-bottom: 8px;
+    }
+    .snippet-card textarea {
+      width: 100%; min-height: 140px; padding: 12px; border: 1px solid var(--border);
+      border-radius: var(--radius-sm); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.72rem; color: var(--text); background: #fafafa; outline: none; resize: vertical;
+    }
+
+    /* Export Bar */
+    .export-bar {
+      display: none; align-items: center; justify-content: space-between; gap: 12px;
+      background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 16px;
+    }
+    .export-bar.visible { display: flex; }
+    .export-info { font-size: 0.75rem; color: var(--text2); }
+    .export-info strong { color: var(--text); }
+    .export-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .btn {
+      padding: 10px 16px; border: none; border-radius: var(--radius-sm);
+      font-family: inherit; font-size: 0.78rem; font-weight: 600;
+      cursor: pointer; transition: all var(--transition); display: inline-flex;
+      align-items: center; gap: 5px;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); box-shadow: var(--shadow-hover); }
+    .btn-secondary { background: var(--bg); color: var(--text); border: 1.5px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Loading */
+    .loading-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(255,255,255,0.8); align-items: center; justify-content: center;
+      z-index: 100;
+    }
+    .loading-overlay.visible { display: flex; }
+    .spinner {
+      width: 32px; height: 32px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Responsive */
+    @media (max-width: 700px) {
+      .controls-grid { grid-template-columns: 1fr 1fr; }
+      .preview-row { grid-template-columns: 1fr; }
+      .icons-grid { grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); }
+      .export-bar { flex-direction: column; text-align: center; }
+    }
+    @media (max-width: 480px) {
+      .controls-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <h1>Favicon Generator</h1>
+      <p>Charge ton logo, personnalise et t&eacute;l&eacute;charge toutes les tailles + .ico + manifest PWA</p>
+    </div>
+
+    <!-- Drop Zone -->
+    <div class="dropzone" id="dropzone">
+      <div class="dropzone-empty">
+        <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <div class="dropzone-text">Glissez votre logo ici ou cliquez</div>
+        <div class="dropzone-sub">PNG, JPG, SVG, WEBP &mdash; max 10 Mo</div>
+      </div>
+      <div class="dropzone-preview" id="dropPreview">
+        <img id="dropThumb" src="" alt="preview">
+        <span class="file-name" id="dropFileName"></span>
+        <button class="remove-btn" id="removeFile">&times; Retirer</button>
+      </div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*,.svg">
+
+    <!-- Controls -->
+    <div class="controls-card" id="controlsCard">
+      <h2>R&eacute;glages</h2>
+      <div class="controls-grid">
+        <div class="control-item">
+          <label>Nom du site</label>
+          <input type="text" id="siteName" value="Mon Site" placeholder="Nom pour le manifest">
+        </div>
+        <div class="control-item">
+          <label>Couleur th&egrave;me</label>
+          <input type="color" id="themeColor" value="#0071e3">
+        </div>
+        <div class="control-item">
+          <label>Fond</label>
+          <input type="color" id="bgColor" value="#ffffff">
+        </div>
+        <div class="control-item">
+          <label>Marge (%)</label>
+          <div class="slider-row">
+            <input type="range" id="paddingSlider" min="0" max="40" value="10">
+            <input type="number" id="paddingNumber" min="0" max="40" value="10">
+          </div>
+        </div>
+        <div class="control-item">
+          <label>Rayon (px)</label>
+          <div class="slider-row">
+            <input type="range" id="radiusSlider" min="0" max="128" value="0">
+            <input type="number" id="radiusNumber" min="0" max="128" value="0">
+          </div>
+        </div>
+        <div class="control-item">
+          <label>Fond transparent</label>
+          <select id="transparentSelect">
+            <option value="true" selected>Oui</option>
+            <option value="false">Non</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview-section" id="previewSection">
+      <div class="preview-row">
+        <div class="preview-card">
+          <div class="preview-card-label">Aper&ccedil;u navigateur</div>
+          <div class="browser-mockup">
+            <div class="tab-bar">
+              <div class="tab-favicon" id="tabFavicon"></div>
+              <div class="tab-title" id="tabTitle">Mon Site</div>
+              <div class="tab-dots"><span></span><span></span><span></span></div>
+            </div>
+            <div class="tab-bar" style="background:#2d2d2f">
+              <div class="tab-favicon" id="tabFaviconDark"></div>
+              <div class="tab-title" id="tabTitleDark" style="color:#fff">Mon Site</div>
+              <div class="tab-dots"><span style="background:#666"></span><span style="background:#666"></span><span style="background:#666"></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="preview-card">
+          <div class="preview-card-label">Aper&ccedil;u mobile (PWA)</div>
+          <div class="browser-mockup" style="flex-direction:row;gap:20px;justify-content:center;padding:24px">
+            <div class="mobile-mockup" id="mobileLight" style="background:#f5f5f7;border-radius:12px;padding:8px">
+              <div class="mobile-icon" id="mobileIconLight"></div>
+              <div class="mobile-label" id="mobileLabelLight">Mon Site</div>
+            </div>
+            <div class="mobile-mockup" id="mobileDark" style="background:#1c1c1e;border-radius:12px;padding:8px">
+              <div class="mobile-icon" id="mobileIconDark"></div>
+              <div class="mobile-label" id="mobileLabelDark" style="color:#aaa">Mon Site</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- All sizes -->
+      <div class="preview-card">
+        <div class="preview-card-label">Toutes les tailles g&eacute;n&eacute;r&eacute;es</div>
+        <div class="icons-grid" id="iconsGrid"></div>
+      </div>
+    </div>
+
+    <!-- Snippet -->
+    <div class="snippet-card" id="snippetCard">
+      <label>Snippet HTML &agrave; coller dans &lt;head&gt;</label>
+      <textarea id="snippetArea" readonly placeholder="Le code appara&icirc;tra apr&egrave;s g&eacute;n&eacute;ration..."></textarea>
+    </div>
+
+    <!-- Export Bar -->
+    <div class="export-bar" id="exportBar">
+      <div class="export-info"><strong id="sizeCount">11</strong> ic&ocirc;nes g&eacute;n&eacute;r&eacute;es &mdash; pr&ecirc;t &agrave; t&eacute;l&eacute;charger</div>
+      <div class="export-actions">
+        <button class="btn btn-secondary" id="resetBtn">R&eacute;initialiser</button>
+        <button class="btn btn-secondary" id="copyBtn">Copier snippet</button>
+        <button class="btn btn-primary" id="zipBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          T&eacute;l&eacute;charger .zip
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
+
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+  <script>
+  (function() {
+    const SIZES = [16, 32, 48, 64, 96, 128, 180, 192, 256, 384, 512];
+    const $ = id => document.getElementById(id);
+
+    const dropzone = $('dropzone');
+    const fileInput = $('fileInput');
+    const dropPreview = $('dropPreview');
+    const dropThumb = $('dropThumb');
+    const dropFileName = $('dropFileName');
+    const removeFile = $('removeFile');
+    const controlsCard = $('controlsCard');
+    const previewSection = $('previewSection');
+    const snippetCard = $('snippetCard');
+    const exportBar = $('exportBar');
+    const iconsGrid = $('iconsGrid');
+    const snippetArea = $('snippetArea');
+    const loadingOverlay = $('loadingOverlay');
+
+    const siteName = $('siteName');
+    const themeColor = $('themeColor');
+    const bgColor = $('bgColor');
+    const paddingSlider = $('paddingSlider');
+    const paddingNumber = $('paddingNumber');
+    const radiusSlider = $('radiusSlider');
+    const radiusNumber = $('radiusNumber');
+    const transparentSelect = $('transparentSelect');
+
+    let srcDataURL = null;
+    let srcImage = null;
+    let generated = {};
+    let debounceTimer = null;
+
+    // --- Drag & Drop ---
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault(); dropzone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) loadFile(file);
+    });
+    fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+    removeFile.addEventListener('click', e => { e.stopPropagation(); resetAll(); });
+
+    function loadFile(file) {
+      if (file.size > 10 * 1024 * 1024) { alert('Fichier trop lourd (max 10 Mo)'); return; }
+      const reader = new FileReader();
+      reader.onload = ev => {
+        srcDataURL = ev.target.result;
+        const img = new Image();
+        img.onload = () => {
+          srcImage = img;
+          showUI();
+          debouncedGenerate();
+        };
+        img.src = srcDataURL;
+      };
+      reader.readAsDataURL(file);
+      dropThumb.src = URL.createObjectURL(file);
+      dropFileName.textContent = file.name;
+      dropPreview.classList.add('visible');
+      dropzone.classList.add('has-image');
+    }
+
+    function showUI() {
+      controlsCard.classList.add('visible');
+      previewSection.classList.add('visible');
+      snippetCard.classList.add('visible');
+      exportBar.classList.add('visible');
+    }
+
+    function hideUI() {
+      controlsCard.classList.remove('visible');
+      previewSection.classList.remove('visible');
+      snippetCard.classList.remove('visible');
+      exportBar.classList.remove('visible');
+      dropPreview.classList.remove('visible');
+      dropzone.classList.remove('has-image');
+    }
+
+    // --- Sync sliders ---
+    function syncSlider(range, num) {
+      range.addEventListener('input', () => { num.value = range.value; debouncedGenerate(); });
+      num.addEventListener('input', () => {
+        let v = Math.min(Math.max(Number(num.value), Number(range.min)), Number(range.max));
+        range.value = v; debouncedGenerate();
+      });
+    }
+    syncSlider(paddingSlider, paddingNumber);
+    syncSlider(radiusSlider, radiusNumber);
+
+    // Live update on any control change
+    [themeColor, bgColor, transparentSelect, siteName].forEach(el => {
+      el.addEventListener('input', debouncedGenerate);
+      el.addEventListener('change', debouncedGenerate);
+    });
+
+    function debouncedGenerate() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(generate, 200);
+    }
+
+    // --- Rasterize ---
+    function drawRounded(ctx, x, y, w, h, r) {
+      const rr = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + w, y, x + w, y + h, rr);
+      ctx.arcTo(x + w, y + h, x, y + h, rr);
+      ctx.arcTo(x, y + h, x, y, rr);
+      ctx.arcTo(x, y, x + w, y, rr);
+      ctx.closePath();
+    }
+
+    function rasterize(img, size, opts) {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, size, size);
+
+      const pad = Math.round(size * (opts.padding / 100));
+      const inner = size - pad * 2;
+      const r = Math.round(opts.radius * (size / 512));
+
+      if (!opts.transparent) {
+        if (r > 0) {
+          drawRounded(ctx, 0, 0, size, size, r);
+          ctx.fillStyle = opts.bg;
+          ctx.fill();
+        } else {
+          ctx.fillStyle = opts.bg;
+          ctx.fillRect(0, 0, size, size);
+        }
+      }
+
+      if (r > 0) {
+        ctx.save();
+        drawRounded(ctx, 0, 0, size, size, r);
+        ctx.clip();
+      }
+
+      const ratio = Math.min(inner / img.width, inner / img.height);
+      const w = Math.round(img.width * ratio);
+      const h = Math.round(img.height * ratio);
+      const dx = Math.round((size - w) / 2);
+      const dy = Math.round((size - h) / 2);
+
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, dx, dy, w, h);
+      if (r > 0) ctx.restore();
+
+      return canvas;
+    }
+
+    function dataURLToBlob(dataURL) {
+      const [meta, data] = dataURL.split(',');
+      const mime = meta.match(/:(.*?);/)[1];
+      const bin = atob(data);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      return new Blob([arr], { type: mime });
+    }
+
+    // --- Generate ---
+    async function generate() {
+      if (!srcImage) return;
+
+      const opts = {
+        padding: +paddingSlider.value,
+        radius: +radiusSlider.value,
+        bg: bgColor.value,
+        transparent: transparentSelect.value === 'true',
+        name: siteName.value || 'Mon Site',
+        theme: themeColor.value,
+      };
+
+      generated = { png: {}, ico: null, manifest: null, html: '' };
+
+      // Generate all sizes
+      for (const s of SIZES) {
+        const canvas = rasterize(srcImage, s, opts);
+        generated.png[s] = canvas.toDataURL('image/png');
+      }
+
+      // Update browser tab preview
+      const fav32 = generated.png[32] || generated.png[16];
+      $('tabFavicon').innerHTML = `<img src="${fav32}" alt="favicon">`;
+      $('tabFaviconDark').innerHTML = `<img src="${fav32}" alt="favicon">`;
+      $('tabTitle').textContent = opts.name;
+      $('tabTitleDark').textContent = opts.name;
+
+      // Update mobile preview
+      const pwa192 = generated.png[192];
+      $('mobileIconLight').innerHTML = `<img src="${pwa192}" alt="icon">`;
+      $('mobileIconDark').innerHTML = `<img src="${pwa192}" alt="icon">`;
+      $('mobileLabelLight').textContent = opts.name;
+      $('mobileLabelDark').textContent = opts.name;
+
+      // Icons grid
+      iconsGrid.innerHTML = '';
+      for (const s of SIZES) {
+        const div = document.createElement('div');
+        div.className = 'icon-thumb';
+        const img = document.createElement('img');
+        img.src = generated.png[s];
+        img.alt = `${s}x${s}`;
+        img.style.width = Math.min(s, 64) + 'px';
+        img.style.height = Math.min(s, 64) + 'px';
+        const label = document.createElement('span');
+        label.textContent = `${s}\u00d7${s}`;
+        div.appendChild(img);
+        div.appendChild(label);
+        iconsGrid.appendChild(div);
+      }
+
+      // Generate ICO (16, 32, 48)
+      // We'll build a simple ICO file manually
+      generated.ico = buildICO([16, 32, 48].map(s => {
+        const canvas = rasterize(srcImage, s, opts);
+        return { size: s, canvas };
+      }));
+
+      // Manifest
+      const icons = [192, 256, 384, 512].map(s => ({
+        src: `icons/icon-${s}.png`, sizes: `${s}x${s}`, type: 'image/png', purpose: 'any maskable'
+      }));
+      generated.manifest = JSON.stringify({
+        name: opts.name, short_name: opts.name, icons,
+        theme_color: opts.theme,
+        background_color: opts.transparent ? '#ffffff' : opts.bg,
+        display: 'standalone'
+      }, null, 2);
+
+      // HTML snippet
+      generated.html = [
+        '<!-- Favicon -->',
+        '<link rel="icon" type="image/x-icon" href="/favicon.ico">',
+        '<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png">',
+        '<link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png">',
+        '',
+        '<!-- Apple Touch Icon -->',
+        '<link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png">',
+        '',
+        '<!-- PWA Manifest -->',
+        '<link rel="manifest" href="/site.webmanifest">',
+        `<meta name="theme-color" content="${opts.theme}">`
+      ].join('\n');
+
+      snippetArea.value = generated.html;
+      $('sizeCount').textContent = SIZES.length;
+    }
+
+    // Simple ICO builder (no external lib needed)
+    function buildICO(entries) {
+      const pngs = entries.map(e => {
+        const dataURL = e.canvas.toDataURL('image/png');
+        const blob = dataURLToBlob(dataURL);
+        return { size: e.size, blob };
+      });
+
+      // We'll use PNG-in-ICO format
+      return Promise.all(pngs.map(p => p.blob.arrayBuffer())).then(buffers => {
+        const count = buffers.length;
+        const headerSize = 6 + count * 16;
+        let totalSize = headerSize;
+        buffers.forEach(b => totalSize += b.byteLength);
+
+        const ico = new ArrayBuffer(totalSize);
+        const view = new DataView(ico);
+
+        // ICO header
+        view.setUint16(0, 0, true); // reserved
+        view.setUint16(2, 1, true); // type: ICO
+        view.setUint16(4, count, true); // count
+
+        let offset = headerSize;
+        for (let i = 0; i < count; i++) {
+          const size = pngs[i].size;
+          const dirOffset = 6 + i * 16;
+          view.setUint8(dirOffset, size < 256 ? size : 0); // width
+          view.setUint8(dirOffset + 1, size < 256 ? size : 0); // height
+          view.setUint8(dirOffset + 2, 0); // color palette
+          view.setUint8(dirOffset + 3, 0); // reserved
+          view.setUint16(dirOffset + 4, 1, true); // color planes
+          view.setUint16(dirOffset + 6, 32, true); // bits per pixel
+          view.setUint32(dirOffset + 8, buffers[i].byteLength, true); // size
+          view.setUint32(dirOffset + 12, offset, true); // offset
+
+          const src = new Uint8Array(buffers[i]);
+          const dst = new Uint8Array(ico, offset, src.length);
+          dst.set(src);
+          offset += buffers[i].byteLength;
+        }
+
+        return new Blob([ico], { type: 'image/x-icon' });
+      });
+    }
+
+    // --- ZIP Download ---
+    async function downloadZip() {
+      if (!generated.png || !Object.keys(generated.png).length) {
+        alert("G\u00e9n\u00e8re d'abord !"); return;
+      }
+      loadingOverlay.classList.add('visible');
+
+      try {
+        const zip = new JSZip();
+        const folder = zip.folder('icons');
+
+        for (const s of SIZES) {
+          folder.file(`icon-${s}.png`, dataURLToBlob(generated.png[s]));
+        }
+
+        const icoBlob = await generated.ico;
+        zip.file('favicon.ico', icoBlob);
+        zip.file('site.webmanifest', new Blob([generated.manifest], { type: 'application/json' }));
+        zip.file('HEAD-snippet.html', new Blob([generated.html], { type: 'text/html' }));
+
+        const out = await zip.generateAsync({ type: 'blob' });
+        saveAs(out, 'favicons-package.zip');
+      } catch (e) {
+        alert('Erreur lors de la cr\u00e9ation du ZIP: ' + e.message);
+      }
+      loadingOverlay.classList.remove('visible');
+    }
+
+    // --- Copy snippet ---
+    async function copySnippet() {
+      if (!generated.html) return;
+      try {
+        await navigator.clipboard.writeText(generated.html);
+        const btn = $('copyBtn');
+        const orig = btn.textContent;
+        btn.textContent = 'Copi\u00e9 !';
+        setTimeout(() => btn.textContent = orig, 1500);
+      } catch (e) {
+        snippetArea.select();
+        document.execCommand('copy');
+      }
+    }
+
+    // --- Reset ---
+    function resetAll() {
+      srcDataURL = null;
+      srcImage = null;
+      generated = {};
+      fileInput.value = '';
+      iconsGrid.innerHTML = '';
+      snippetArea.value = '';
+      $('tabFavicon').innerHTML = '';
+      $('tabFaviconDark').innerHTML = '';
+      $('mobileIconLight').innerHTML = '';
+      $('mobileIconDark').innerHTML = '';
+      hideUI();
+    }
+
+    // --- Wire buttons ---
+    $('zipBtn').addEventListener('click', downloadZip);
+    $('copyBtn').addEventListener('click', copySnippet);
+    $('resetBtn').addEventListener('click', resetAll);
+  })();
+  </script>
+</body>
+</html>
