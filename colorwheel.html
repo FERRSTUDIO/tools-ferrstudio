@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roue Chromatique Interactive</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f5f7;
+      --card: #ffffff;
+      --border: #e5e5ea;
+      --text: #1d1d1f;
+      --text2: #6e6e73;
+      --accent: #0071e3;
+      --accent-hover: #0077ed;
+      --shadow: 0 2px 12px rgba(0,0,0,0.08);
+      --shadow-hover: 0 4px 20px rgba(0,0,0,0.12);
+      --radius: 14px;
+      --radius-sm: 10px;
+      --transition: 0.2s ease;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Montserrat', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .header { text-align: center; padding: 8px 0; }
+    .header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+    .header p { font-size: 0.8rem; color: var(--text2); margin-top: 2px; }
+
+    /* Wheel Section */
+    .wheel-section {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .wheel-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+
+    .wheel-container {
+      position: relative;
+      width: 280px;
+      height: 280px;
+    }
+    .wheel-canvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      cursor: crosshair;
+    }
+    .wheel-marker {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.3), 0 2px 6px rgba(0,0,0,0.3);
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      z-index: 5;
+    }
+    .wheel-marker.secondary {
+      width: 14px;
+      height: 14px;
+      border-width: 2px;
+      opacity: 0.9;
+    }
+
+    /* Lightness slider */
+    .lightness-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+    .lightness-row label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text2);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .lightness-row input[type="range"] {
+      flex: 1;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      border-radius: 3px;
+      outline: none;
+      background: linear-gradient(to right, #000, #888, #fff);
+    }
+    .lightness-row input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid #333;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    /* Controls panel */
+    .controls-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .harmony-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+    .harmony-card h2 {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 10px;
+    }
+    .harmony-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .harmony-btn {
+      padding: 6px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--bg);
+      color: var(--text);
+      transition: all var(--transition);
+    }
+    .harmony-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .harmony-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* Base color input */
+    .base-color-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .base-color-row label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text2);
+      text-transform: uppercase;
+    }
+    .hex-input {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.8rem;
+      width: 100px;
+      outline: none;
+    }
+    .hex-input:focus { border-color: var(--accent); }
+    .color-preview-input {
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      padding: 2px;
+    }
+
+    /* Palette preview strip */
+    .palette-strip {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .palette-strip-label {
+      padding: 8px 14px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--border);
+      background: #fafafa;
+    }
+    .palette-colors {
+      display: flex;
+      height: 80px;
+    }
+    .palette-color-block {
+      flex: 1;
+      cursor: pointer;
+      position: relative;
+      transition: flex var(--transition);
+    }
+    .palette-color-block:hover { flex: 1.5; }
+    .palette-color-block .color-label {
+      position: absolute;
+      bottom: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.6rem;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(0,0,0,0.4);
+      color: #fff;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+    .palette-color-block:hover .color-label { opacity: 1; }
+
+    /* Color cards */
+    .colors-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+    }
+    .color-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: box-shadow var(--transition);
+    }
+    .color-card:hover { box-shadow: var(--shadow-hover); }
+    .color-card.is-base { outline: 2.5px solid var(--accent); outline-offset: -1px; }
+    .color-swatch {
+      height: 70px;
+      width: 100%;
+      position: relative;
+    }
+    .color-swatch .base-badge {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      font-size: 0.55rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.9);
+      color: var(--text);
+      text-transform: uppercase;
+    }
+    .color-info {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .color-info .color-name {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text2);
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .color-value-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+    }
+    .color-value {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.68rem;
+      color: var(--text);
+    }
+    .copy-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.65rem;
+      color: var(--accent);
+      font-weight: 600;
+      font-family: inherit;
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: background var(--transition);
+    }
+    .copy-btn:hover { background: #f0f7ff; }
+
+    /* Export bar */
+    .export-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 10px 16px;
+    }
+    .export-info { font-size: 0.75rem; color: var(--text2); }
+    .export-actions { display: flex; gap: 6px; }
+    .btn {
+      padding: 8px 14px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-secondary { background: var(--bg); color: var(--text); border: 1.5px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: #1d1d1f;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 100;
+    }
+    .toast.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Responsive */
+    @media (max-width: 700px) {
+      .wheel-section { flex-direction: column; }
+      .wheel-container { width: 220px; height: 220px; }
+      .colors-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+      .export-bar { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <h1>Roue Chromatique</h1>
+      <p>Explorez les harmonies de couleurs et g&eacute;n&eacute;rez des palettes professionnelles</p>
+    </div>
+
+    <div class="wheel-section">
+      <!-- Wheel -->
+      <div class="wheel-card">
+        <div class="wheel-container" id="wheelContainer">
+          <canvas class="wheel-canvas" id="wheelCanvas" width="560" height="560"></canvas>
+        </div>
+        <div class="lightness-row">
+          <label>Luminosit&eacute;</label>
+          <input type="range" id="lightnessSlider" min="10" max="90" value="50">
+        </div>
+        <div class="base-color-row">
+          <label>Couleur</label>
+          <input type="color" id="colorPickerInput" class="color-preview-input" value="#e30071">
+          <input type="text" id="hexInput" class="hex-input" value="#E30071" maxlength="7">
+        </div>
+      </div>
+
+      <!-- Harmonies -->
+      <div class="controls-panel">
+        <div class="harmony-card">
+          <h2>Harmonie</h2>
+          <div class="harmony-btns">
+            <button class="harmony-btn active" data-harmony="complementary">Compl&eacute;mentaire</button>
+            <button class="harmony-btn" data-harmony="analogous">Analogue</button>
+            <button class="harmony-btn" data-harmony="triadic">Triadique</button>
+            <button class="harmony-btn" data-harmony="tetradic">T&eacute;tradique</button>
+            <button class="harmony-btn" data-harmony="split">Split-compl&eacute;mentaire</button>
+            <button class="harmony-btn" data-harmony="monochromatic">Monochromatique</button>
+          </div>
+        </div>
+
+        <!-- Palette strip -->
+        <div class="palette-strip">
+          <div class="palette-strip-label">Palette</div>
+          <div class="palette-colors" id="paletteStrip"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Color cards -->
+    <div class="colors-grid" id="colorsGrid"></div>
+
+    <!-- Export bar -->
+    <div class="export-bar">
+      <div class="export-info">Cliquez sur la roue pour choisir &bull; Cliquez sur un code pour copier</div>
+      <div class="export-actions">
+        <button class="btn btn-secondary" id="randomBtn">Al&eacute;atoire</button>
+        <button class="btn btn-primary" id="exportCSSBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+          Copier CSS
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Copi&eacute; !</div>
+
+  <script>
+  (function() {
+    const $ = id => document.getElementById(id);
+    const wheelCanvas = $('wheelCanvas');
+    const wheelContainer = $('wheelContainer');
+    const lightnessSlider = $('lightnessSlider');
+    const colorPickerInput = $('colorPickerInput');
+    const hexInput = $('hexInput');
+    const paletteStrip = $('paletteStrip');
+    const colorsGrid = $('colorsGrid');
+    const toast = $('toast');
+
+    let baseHue = 330;
+    let baseSat = 100;
+    let baseLit = 50;
+    let harmony = 'complementary';
+    let markers = [];
+
+    // --- Color utils ---
+    function hslToHex(h, s, l) {
+      h = ((h % 360) + 360) % 360;
+      s = Math.max(0, Math.min(100, s));
+      l = Math.max(0, Math.min(100, l));
+      const s1 = s / 100, l1 = l / 100;
+      const c = (1 - Math.abs(2 * l1 - 1)) * s1;
+      const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+      const m = l1 - c / 2;
+      let r, g, b;
+      if (h < 60) { r = c; g = x; b = 0; }
+      else if (h < 120) { r = x; g = c; b = 0; }
+      else if (h < 180) { r = 0; g = c; b = x; }
+      else if (h < 240) { r = 0; g = x; b = c; }
+      else if (h < 300) { r = x; g = 0; b = c; }
+      else { r = c; g = 0; b = x; }
+      const toHex = v => Math.round((v + m) * 255).toString(16).padStart(2, '0');
+      return '#' + toHex(r) + toHex(g) + toHex(b);
+    }
+
+    function hexToHSL(hex) {
+      hex = hex.replace('#', '');
+      const r = parseInt(hex.substr(0, 2), 16) / 255;
+      const g = parseInt(hex.substr(2, 2), 16) / 255;
+      const b = parseInt(hex.substr(4, 2), 16) / 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
+      if (max === min) { h = s = 0; }
+      else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+          case g: h = ((b - r) / d + 2) / 6; break;
+          case b: h = ((r - g) / d + 4) / 6; break;
+        }
+      }
+      return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+    }
+
+    function hslToRGB(h, s, l) {
+      const hex = hslToHex(h, s, l).replace('#', '');
+      return {
+        r: parseInt(hex.substr(0, 2), 16),
+        g: parseInt(hex.substr(2, 2), 16),
+        b: parseInt(hex.substr(4, 2), 16)
+      };
+    }
+
+    function isLightColor(hex) {
+      const rgb = hslToRGB(0, 0, 0); // placeholder
+      const h = hex.replace('#', '');
+      const r = parseInt(h.substr(0, 2), 16);
+      const g = parseInt(h.substr(2, 2), 16);
+      const b = parseInt(h.substr(4, 2), 16);
+      return (r * 299 + g * 587 + b * 114) / 1000 > 150;
+    }
+
+    // --- Draw wheel ---
+    function drawWheel() {
+      const ctx = wheelCanvas.getContext('2d');
+      const size = wheelCanvas.width;
+      const cx = size / 2, cy = size / 2;
+      const outerR = size / 2 - 4;
+      const innerR = outerR * 0.25;
+
+      ctx.clearRect(0, 0, size, size);
+
+      // Draw hue ring
+      for (let angle = 0; angle < 360; angle += 0.5) {
+        const rad1 = (angle - 0.5) * Math.PI / 180;
+        const rad2 = (angle + 0.5) * Math.PI / 180;
+        ctx.beginPath();
+        ctx.moveTo(cx + innerR * Math.cos(rad1), cy - innerR * Math.sin(rad1));
+        ctx.lineTo(cx + outerR * Math.cos(rad1), cy - outerR * Math.sin(rad1));
+        ctx.arc(cx, cy, outerR, -rad1, -rad2, true);
+        ctx.lineTo(cx + innerR * Math.cos(rad2), cy - innerR * Math.sin(rad2));
+        ctx.arc(cx, cy, innerR, -rad2, -rad1, false);
+        ctx.fillStyle = `hsl(${angle}, 100%, ${baseLit}%)`;
+        ctx.fill();
+      }
+
+      // Center circle with selected color
+      ctx.beginPath();
+      ctx.arc(cx, cy, innerR - 2, 0, Math.PI * 2);
+      ctx.fillStyle = hslToHex(baseHue, baseSat, baseLit);
+      ctx.fill();
+    }
+
+    // --- Position markers on wheel ---
+    function updateMarkers() {
+      // Remove old markers
+      markers.forEach(m => m.remove());
+      markers = [];
+
+      const colors = getHarmonyColors();
+      const container = wheelContainer;
+      const rect = container.getBoundingClientRect();
+      const size = rect.width;
+      const cx = size / 2, cy = size / 2;
+      const r = size / 2 * 0.625; // midpoint of ring
+
+      colors.forEach((color, i) => {
+        const marker = document.createElement('div');
+        marker.className = 'wheel-marker' + (i > 0 ? ' secondary' : '');
+        marker.style.background = color.hex;
+        const rad = color.h * Math.PI / 180;
+        const x = cx + r * Math.cos(-rad);
+        const y = cy + r * Math.sin(-rad);
+        marker.style.left = x + 'px';
+        marker.style.top = y + 'px';
+        container.appendChild(marker);
+        markers.push(marker);
+      });
+    }
+
+    // --- Harmony calculations ---
+    function getHarmonyColors() {
+      const h = baseHue, s = baseSat, l = baseLit;
+      const colors = [];
+      const names = {
+        complementary: ['Base', 'Compl\u00e9mentaire'],
+        analogous: ['Base', 'Analogue -30\u00b0', 'Analogue +30\u00b0'],
+        triadic: ['Base', 'Triade +120\u00b0', 'Triade +240\u00b0'],
+        tetradic: ['Base', 'T\u00e9trade +90\u00b0', 'T\u00e9trade +180\u00b0', 'T\u00e9trade +270\u00b0'],
+        split: ['Base', 'Split +150\u00b0', 'Split +210\u00b0'],
+        monochromatic: ['Base', 'Clair', 'Moyen', 'Fonc\u00e9']
+      };
+
+      const n = names[harmony] || names.complementary;
+
+      switch (harmony) {
+        case 'complementary':
+          colors.push({ h, s, l, name: n[0] });
+          colors.push({ h: (h + 180) % 360, s, l, name: n[1] });
+          break;
+        case 'analogous':
+          colors.push({ h, s, l, name: n[0] });
+          colors.push({ h: (h + 330) % 360, s, l, name: n[1] });
+          colors.push({ h: (h + 30) % 360, s, l, name: n[2] });
+          break;
+        case 'triadic':
+          colors.push({ h, s, l, name: n[0] });
+          colors.push({ h: (h + 120) % 360, s, l, name: n[1] });
+          colors.push({ h: (h + 240) % 360, s, l, name: n[2] });
+          break;
+        case 'tetradic':
+          colors.push({ h, s, l, name: n[0] });
+          colors.push({ h: (h + 90) % 360, s, l, name: n[1] });
+          colors.push({ h: (h + 180) % 360, s, l, name: n[2] });
+          colors.push({ h: (h + 270) % 360, s, l, name: n[3] });
+          break;
+        case 'split':
+          colors.push({ h, s, l, name: n[0] });
+          colors.push({ h: (h + 150) % 360, s, l, name: n[1] });
+          colors.push({ h: (h + 210) % 360, s, l, name: n[2] });
+          break;
+        case 'monochromatic':
+          colors.push({ h, s, l, name: n[0] });
+          colors.push({ h, s, l: Math.min(90, l + 25), name: n[1] });
+          colors.push({ h, s: Math.max(20, s - 30), l, name: n[2] });
+          colors.push({ h, s, l: Math.max(15, l - 25), name: n[3] });
+          break;
+      }
+
+      return colors.map(c => ({
+        ...c,
+        hex: hslToHex(c.h, c.s, c.l).toUpperCase(),
+        rgb: hslToRGB(c.h, c.s, c.l),
+        hsl: { h: Math.round(c.h), s: Math.round(c.s), l: Math.round(c.l) }
+      }));
+    }
+
+    // --- Render palette ---
+    function renderPalette() {
+      const colors = getHarmonyColors();
+
+      // Strip
+      paletteStrip.innerHTML = '';
+      colors.forEach(c => {
+        const block = document.createElement('div');
+        block.className = 'palette-color-block';
+        block.style.background = c.hex;
+        block.innerHTML = `<span class="color-label">${c.hex}</span>`;
+        block.addEventListener('click', () => copyText(c.hex));
+        paletteStrip.appendChild(block);
+      });
+
+      // Cards
+      colorsGrid.innerHTML = '';
+      colors.forEach((c, i) => {
+        const card = document.createElement('div');
+        card.className = 'color-card' + (i === 0 ? ' is-base' : '');
+        const rgbStr = `rgb(${c.rgb.r}, ${c.rgb.g}, ${c.rgb.b})`;
+        const hslStr = `hsl(${c.hsl.h}, ${c.hsl.s}%, ${c.hsl.l}%)`;
+        card.innerHTML = `
+          <div class="color-swatch" style="background:${c.hex}">
+            ${i === 0 ? '<span class="base-badge">Base</span>' : ''}
+          </div>
+          <div class="color-info">
+            <div class="color-name">${c.name}</div>
+            <div class="color-value-row">
+              <span class="color-value">${c.hex}</span>
+              <button class="copy-btn" data-copy="${c.hex}">Copier</button>
+            </div>
+            <div class="color-value-row">
+              <span class="color-value">${rgbStr}</span>
+              <button class="copy-btn" data-copy="${rgbStr}">Copier</button>
+            </div>
+            <div class="color-value-row">
+              <span class="color-value">${hslStr}</span>
+              <button class="copy-btn" data-copy="${hslStr}">Copier</button>
+            </div>
+          </div>
+        `;
+        colorsGrid.appendChild(card);
+      });
+
+      // Copy buttons
+      colorsGrid.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', () => copyText(btn.dataset.copy));
+      });
+
+      updateMarkers();
+    }
+
+    // --- Wheel interaction ---
+    function handleWheelClick(e) {
+      const rect = wheelCanvas.getBoundingClientRect();
+      const x = e.clientX - rect.left - rect.width / 2;
+      const y = e.clientY - rect.top - rect.height / 2;
+      const dist = Math.sqrt(x * x + y * y);
+      const outerR = rect.width / 2;
+      const innerR = outerR * 0.25;
+
+      if (dist < innerR || dist > outerR) return;
+
+      let angle = Math.atan2(-y, x) * 180 / Math.PI;
+      if (angle < 0) angle += 360;
+      baseHue = Math.round(angle);
+      syncInputs();
+      update();
+    }
+
+    let wheelDragging = false;
+    wheelCanvas.addEventListener('mousedown', (e) => {
+      handleWheelClick(e);
+      wheelDragging = true;
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (wheelDragging) handleWheelClick(e);
+    });
+    document.addEventListener('mouseup', () => { wheelDragging = false; });
+
+    // Touch
+    wheelCanvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      handleWheelClick(e.touches[0]);
+      wheelDragging = true;
+    }, { passive: false });
+    wheelCanvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (wheelDragging) handleWheelClick(e.touches[0]);
+    }, { passive: false });
+    wheelCanvas.addEventListener('touchend', () => { wheelDragging = false; });
+
+    // --- Lightness ---
+    lightnessSlider.addEventListener('input', () => {
+      baseLit = +lightnessSlider.value;
+      syncInputs();
+      update();
+    });
+
+    // --- Color picker & hex input ---
+    colorPickerInput.addEventListener('input', () => {
+      const hsl = hexToHSL(colorPickerInput.value);
+      baseHue = hsl.h;
+      baseSat = hsl.s;
+      baseLit = hsl.l;
+      lightnessSlider.value = baseLit;
+      hexInput.value = colorPickerInput.value.toUpperCase();
+      update();
+    });
+
+    hexInput.addEventListener('change', () => {
+      let val = hexInput.value.trim();
+      if (!val.startsWith('#')) val = '#' + val;
+      if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+        const hsl = hexToHSL(val);
+        baseHue = hsl.h;
+        baseSat = hsl.s;
+        baseLit = hsl.l;
+        lightnessSlider.value = baseLit;
+        colorPickerInput.value = val.toLowerCase();
+        hexInput.value = val.toUpperCase();
+        update();
+      }
+    });
+
+    function syncInputs() {
+      const hex = hslToHex(baseHue, baseSat, baseLit);
+      hexInput.value = hex.toUpperCase();
+      colorPickerInput.value = hex;
+    }
+
+    // --- Harmony buttons ---
+    document.querySelectorAll('.harmony-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.harmony-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        harmony = btn.dataset.harmony;
+        update();
+      });
+    });
+
+    // --- Random ---
+    $('randomBtn').addEventListener('click', () => {
+      baseHue = Math.floor(Math.random() * 360);
+      baseSat = 70 + Math.floor(Math.random() * 30);
+      baseLit = 40 + Math.floor(Math.random() * 20);
+      lightnessSlider.value = baseLit;
+      syncInputs();
+      update();
+    });
+
+    // --- Export CSS ---
+    $('exportCSSBtn').addEventListener('click', () => {
+      const colors = getHarmonyColors();
+      const css = ':root {\n' + colors.map((c, i) =>
+        `  --color-${i + 1}: ${c.hex}; /* ${c.name} */`
+      ).join('\n') + '\n}';
+      copyText(css);
+    });
+
+    // --- Copy ---
+    function copyText(text) {
+      navigator.clipboard.writeText(text).then(() => showToast('Copi\u00e9 !')).catch(() => {});
+    }
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('visible');
+      setTimeout(() => toast.classList.remove('visible'), 1500);
+    }
+
+    // --- Update all ---
+    function update() {
+      drawWheel();
+      renderPalette();
+    }
+
+    // Init
+    syncInputs();
+    update();
+  })();
+  </script>
+</body>
+</html>
