@@ -3,203 +3,793 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Convertisseur PNG en SVG</title>
+  <title>Convertisseur IMG → SVG</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg: #f5f5f7;
+      --card: #ffffff;
+      --border: #e5e5ea;
+      --text: #1d1d1f;
+      --text2: #6e6e73;
+      --accent: #0071e3;
+      --accent-hover: #0077ed;
+      --shadow: 0 2px 12px rgba(0,0,0,0.08);
+      --shadow-hover: 0 4px 20px rgba(0,0,0,0.12);
+      --radius: 14px;
+      --radius-sm: 10px;
+      --transition: 0.2s ease;
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Montserrat', sans-serif; background: #f2f2f2; color: #333; display: flex; flex-direction: column; align-items: center; padding: 20px; min-height: 100vh; }
-    main { width: 100%; max-width: 800px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-    .controls { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; align-items: center; width: 100%; }
-    .control-group { display: flex; flex-direction: column; font-size: 0.9rem; }
-    .control-group label { margin-bottom: 4px; }
-    .range-number { display: flex; align-items: center; gap: 8px; }
-    .range-number input[type="range"] { flex: 1; }
-    .range-number input[type="number"] { width: 50px; }
-    .controls button { flex: 1 1 140px; font-size: 0.9rem; background: #fff; border: 1px solid #ddd; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); cursor: pointer; transition: box-shadow 0.2s; padding: 10px; }
-    .controls button:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-    #previewContainer { display: flex; flex-wrap: wrap; gap: 20px; width: 100%; justify-content: center; }
-    .previewBox { background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); flex: 1 1 45%; position: relative; height: 250px; overflow: hidden; }
-    .previewBox h3 { text-align: center; padding-top: 8px; font-weight: 500; }
-    .previewBox canvas, .previewBox svg { position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - 32px); object-fit: contain; }
+
+    body {
+      font-family: 'Montserrat', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 860px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 8px 0;
+    }
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .header p {
+      font-size: 0.8rem;
+      color: var(--text2);
+      margin-top: 2px;
+    }
+
+    /* Drop Zone */
+    .dropzone {
+      background: var(--card);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 32px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color var(--transition), background var(--transition), box-shadow var(--transition);
+    }
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--accent);
+      background: #f0f7ff;
+      box-shadow: var(--shadow);
+    }
+    .dropzone-icon {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 10px;
+      opacity: 0.4;
+    }
+    .dropzone-text {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .dropzone-sub {
+      font-size: 0.75rem;
+      color: var(--text2);
+      margin-top: 4px;
+    }
+    .file-info {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--accent);
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .file-info.visible { display: flex; }
+    .file-info .remove-btn {
+      background: none;
+      border: none;
+      color: #ff3b30;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .file-info .remove-btn:hover { background: #fff0f0; }
+
+    /* Presets */
+    .presets {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .preset-btn {
+      flex: 1 1 0;
+      min-width: 100px;
+      padding: 10px 12px;
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition);
+      text-align: center;
+    }
+    .preset-btn:hover { border-color: var(--accent); box-shadow: var(--shadow); }
+    .preset-btn.active { border-color: var(--accent); background: #f0f7ff; }
+    .preset-btn .preset-icon { font-size: 1.2rem; margin-bottom: 2px; }
+    .preset-btn .preset-label { font-size: 0.72rem; font-weight: 600; color: var(--text); }
+    .preset-btn .preset-desc { font-size: 0.62rem; color: var(--text2); margin-top: 1px; }
+
+    /* Controls Card */
+    .controls-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      display: none;
+    }
+    .controls-card.visible { display: block; }
+    .controls-card h2 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .control-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .control-item label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text2);
+    }
+    .control-item .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .control-item input[type="range"] {
+      flex: 1;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+    }
+    .control-item input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .control-item input[type="number"] {
+      width: 48px;
+      padding: 4px 6px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-family: inherit;
+      text-align: center;
+      outline: none;
+    }
+    .control-item input[type="number"]:focus { border-color: var(--accent); }
+
+    /* Checkbox toggles */
+    .toggles-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .toggle-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .toggle-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    /* Preview */
+    .preview-section {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .preview-section.visible { display: flex; }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .preview-box {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+    }
+    .preview-label {
+      padding: 8px 12px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+      background: #fafafa;
+    }
+    .preview-canvas-wrap {
+      position: relative;
+      height: 280px;
+      overflow: hidden;
+      background: repeating-conic-gradient(#f0f0f0 0% 25%, #fff 0% 50%) 50% / 16px 16px;
+    }
+    .preview-canvas-wrap canvas,
+    .preview-canvas-wrap svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Export bar */
+    .export-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px 16px;
+    }
+    .export-bar.visible { display: flex; }
+
+    .svg-info {
+      font-size: 0.75rem;
+      color: var(--text2);
+    }
+    .svg-info strong { color: var(--text); }
+
+    .export-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-hover); box-shadow: var(--shadow-hover); }
+    .btn-secondary {
+      background: var(--bg);
+      color: var(--text);
+      border: 1.5px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Loading overlay */
+    .loading-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.85);
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      border-radius: var(--radius);
+    }
+    .loading-overlay.visible { display: flex; }
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .controls-grid { grid-template-columns: 1fr; }
+      .preview-grid { grid-template-columns: 1fr; }
+      .preview-canvas-wrap { height: 200px; }
+      .presets { gap: 6px; }
+      .preset-btn { min-width: 70px; padding: 8px; }
+      .export-bar { flex-direction: column; text-align: center; }
+    }
+
+    /* Hidden file input */
     #imageLoader { display: none; }
-    @media (max-width: 768px) { .controls { gap: 10px; } .controls button, .control-group { flex: 1 1 100%; } }
-    @media (max-width: 480px) { main { padding: 15px; } .previewBox { height: 200px; } }
   </style>
 </head>
 <body>
-  <main>
-    <div class="controls">
-      <button id="chooseFileBtn">Choisir un fichier</button>
-      <div class="control-group">
-        <label for="contrastSlider">Contraste</label>
-        <div class="range-number">
-          <input type="range" id="contrastSlider" min="-100" max="100" value="0">
-          <input type="number" id="contrastNumber" min="-100" max="100" value="0">
-        </div>
+  <div class="app">
+    <!-- Header -->
+    <div class="header">
+      <h1>IMG → SVG</h1>
+      <p>Convertisseur d'images en vectoriel</p>
+    </div>
+
+    <!-- Drop Zone -->
+    <div class="dropzone" id="dropzone">
+      <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <div class="dropzone-text">Glissez une image ici ou cliquez</div>
+      <div class="dropzone-sub">PNG, JPG, WEBP — max 10 Mo</div>
+      <div class="file-info" id="fileInfo">
+        <span id="fileName"></span>
+        <button class="remove-btn" id="removeFile">✕ Retirer</button>
       </div>
-      <div class="control-group">
-        <label for="thresholdSlider">Seuil N&amp;B</label>
-        <div class="range-number">
-          <input type="range" id="thresholdSlider" min="0" max="255" value="128">
-          <input type="number" id="thresholdNumber" min="0" max="255" value="128">
-        </div>
-      </div>
-      <div class="control-group">
-        <label for="bwMode">Mode N&amp;B</label>
-        <input type="checkbox" id="bwMode">
-      </div>
-      <button id="vectorizeBtn">Vectoriser</button>
-      <button id="resetBtn">Retour</button>
-      <button id="downloadBtn">Télécharger SVG</button>
     </div>
     <input type="file" id="imageLoader" accept="image/*">
-    <div id="previewContainer">
-      <div class="previewBox"><h3>Original</h3><canvas id="originalCanvas"></canvas></div>
-      <div class="previewBox" id="filteredPreview"><h3>Filtré</h3><canvas id="previewCanvas"></canvas></div>
+
+    <!-- Presets -->
+    <div class="presets" id="presetsSection" style="display:none">
+      <button class="preset-btn" data-preset="detailed">
+        <div class="preset-icon">🔍</div>
+        <div class="preset-label">Détaillé</div>
+        <div class="preset-desc">Maximum de détails</div>
+      </button>
+      <button class="preset-btn" data-preset="logo">
+        <div class="preset-icon">✦</div>
+        <div class="preset-label">Logo</div>
+        <div class="preset-desc">Formes nettes</div>
+      </button>
+      <button class="preset-btn" data-preset="simple">
+        <div class="preset-icon">○</div>
+        <div class="preset-label">Simple</div>
+        <div class="preset-desc">Tracés simplifiés</div>
+      </button>
+      <button class="preset-btn" data-preset="outline">
+        <div class="preset-icon">◇</div>
+        <div class="preset-label">Contour</div>
+        <div class="preset-desc">Noir & blanc</div>
+      </button>
     </div>
-  </main>
+
+    <!-- Controls -->
+    <div class="controls-card" id="controlsCard">
+      <h2>Réglages</h2>
+      <div class="controls-grid">
+        <div class="control-item">
+          <label>Contraste</label>
+          <div class="slider-row">
+            <input type="range" id="contrastSlider" min="-100" max="100" value="0">
+            <input type="number" id="contrastNumber" min="-100" max="100" value="0">
+          </div>
+        </div>
+        <div class="control-item">
+          <label>Seuil N&B</label>
+          <div class="slider-row">
+            <input type="range" id="thresholdSlider" min="0" max="255" value="128">
+            <input type="number" id="thresholdNumber" min="0" max="255" value="128">
+          </div>
+        </div>
+        <div class="control-item">
+          <label>Couleurs</label>
+          <div class="slider-row">
+            <input type="range" id="colorsSlider" min="2" max="64" value="8">
+            <input type="number" id="colorsNumber" min="2" max="64" value="8">
+          </div>
+        </div>
+        <div class="control-item">
+          <label>Précision tracé</label>
+          <div class="slider-row">
+            <input type="range" id="precisionSlider" min="0.1" max="10" value="1" step="0.1">
+            <input type="number" id="precisionNumber" min="0.1" max="10" value="1" step="0.1">
+          </div>
+        </div>
+        <div class="control-item">
+          <label>Détail min (pathomit)</label>
+          <div class="slider-row">
+            <input type="range" id="pathomitSlider" min="0" max="50" value="2">
+            <input type="number" id="pathomitNumber" min="0" max="50" value="2">
+          </div>
+        </div>
+        <div class="control-item">
+          <label>Flou (lissage)</label>
+          <div class="slider-row">
+            <input type="range" id="blurSlider" min="0" max="10" value="0" step="0.5">
+            <input type="number" id="blurNumber" min="0" max="10" value="0" step="0.5">
+          </div>
+        </div>
+      </div>
+      <div class="toggles-row">
+        <label class="toggle-item">
+          <input type="checkbox" id="bwMode"> Mode N&B
+        </label>
+        <label class="toggle-item">
+          <input type="checkbox" id="invertMode"> Inverser
+        </label>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview-section" id="previewSection">
+      <div class="preview-grid">
+        <div class="preview-box">
+          <div class="preview-label">Original</div>
+          <div class="preview-canvas-wrap">
+            <canvas id="originalCanvas"></canvas>
+          </div>
+        </div>
+        <div class="preview-box" style="position:relative">
+          <div class="preview-label">Vectorisé</div>
+          <div class="preview-canvas-wrap" id="svgPreviewWrap">
+            <canvas id="previewCanvas"></canvas>
+            <div id="svgContainer"></div>
+          </div>
+          <div class="loading-overlay" id="loadingOverlay">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Bar -->
+    <div class="export-bar" id="exportBar">
+      <div class="svg-info" id="svgInfo">SVG prêt — <strong id="svgSize">0 Ko</strong></div>
+      <div class="export-actions">
+        <button class="btn btn-secondary" id="resetBtn">Réinitialiser</button>
+        <button class="btn btn-primary" id="downloadBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Télécharger SVG
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script src="https://unpkg.com/imagetracerjs@1.2.6/imagetracer_v1.2.6.js"></script>
   <script>
-    const imageLoader = document.getElementById('imageLoader');
-    const chooseFileBtn = document.getElementById('chooseFileBtn');
-    const vectorizeBtn = document.getElementById('vectorizeBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const contrastSlider = document.getElementById('contrastSlider');
-    const contrastNumber = document.getElementById('contrastNumber');
-    const thresholdSlider = document.getElementById('thresholdSlider');
-    const thresholdNumber = document.getElementById('thresholdNumber');
-    const bwMode = document.getElementById('bwMode');
-    const originalCanvas = document.getElementById('originalCanvas');
-    const previewCanvas = document.getElementById('previewCanvas');
-    const filteredPreview = document.getElementById('filteredPreview');
+    // Elements
+    const $ = id => document.getElementById(id);
+    const imageLoader = $('imageLoader');
+    const dropzone = $('dropzone');
+    const fileInfo = $('fileInfo');
+    const fileName = $('fileName');
+    const removeFile = $('removeFile');
+    const presetsSection = $('presetsSection');
+    const controlsCard = $('controlsCard');
+    const previewSection = $('previewSection');
+    const exportBar = $('exportBar');
+    const originalCanvas = $('originalCanvas');
+    const previewCanvas = $('previewCanvas');
+    const svgContainer = $('svgContainer');
+    const loadingOverlay = $('loadingOverlay');
+    const svgSizeEl = $('svgSize');
+    const resetBtn = $('resetBtn');
+    const downloadBtn = $('downloadBtn');
+
+    // Sliders
+    const sliders = {
+      contrast:  { range: $('contrastSlider'),  num: $('contrastNumber') },
+      threshold: { range: $('thresholdSlider'), num: $('thresholdNumber') },
+      colors:    { range: $('colorsSlider'),    num: $('colorsNumber') },
+      precision: { range: $('precisionSlider'), num: $('precisionNumber') },
+      pathomit:  { range: $('pathomitSlider'),  num: $('pathomitNumber') },
+      blur:      { range: $('blurSlider'),      num: $('blurNumber') },
+    };
+    const bwMode = $('bwMode');
+    const invertMode = $('invertMode');
+
     const ctxOriginal = originalCanvas.getContext('2d');
     const ctx = previewCanvas.getContext('2d');
-    let image = new Image(), lastSVG = '', originalDataUrl = null;
 
-    chooseFileBtn.addEventListener('click', () => imageLoader.click());
-    imageLoader.addEventListener('change', handleFile);
+    let image = new Image();
+    let lastSVG = '';
+    let originalDataUrl = null;
+    let debounceTimer = null;
 
-    function handleFile(e) {
-      const file = e.target.files[0]; if (!file) return;
+    // Presets
+    const presets = {
+      detailed: { contrast: 10, threshold: 128, colors: 24, precision: 0.5, pathomit: 1, blur: 0, bw: false, invert: false },
+      logo:     { contrast: 30, threshold: 128, colors: 8,  precision: 1,   pathomit: 4, blur: 0.5, bw: false, invert: false },
+      simple:   { contrast: 0,  threshold: 128, colors: 4,  precision: 3,   pathomit: 8, blur: 1, bw: false, invert: false },
+      outline:  { contrast: 40, threshold: 120, colors: 2,  precision: 1,   pathomit: 2, blur: 0, bw: true,  invert: false },
+    };
+
+    // --- Drag & Drop ---
+    dropzone.addEventListener('click', () => imageLoader.click());
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) loadFile(file);
+    });
+    imageLoader.addEventListener('change', e => {
+      if (e.target.files[0]) loadFile(e.target.files[0]);
+    });
+    removeFile.addEventListener('click', e => {
+      e.stopPropagation();
+      resetAll();
+    });
+
+    function loadFile(file) {
+      if (file.size > 10 * 1024 * 1024) { alert('Fichier trop lourd (max 10 Mo)'); return; }
       const reader = new FileReader();
       reader.onload = ev => {
         originalDataUrl = ev.target.result;
-        image.onload = () => setupCanvases();
+        image.onload = () => {
+          showUI();
+          setupCanvases();
+          debouncedProcess();
+        };
         image.src = ev.target.result;
       };
       reader.readAsDataURL(file);
+      fileName.textContent = file.name;
+      fileInfo.classList.add('visible');
     }
 
+    function showUI() {
+      presetsSection.style.display = 'flex';
+      controlsCard.classList.add('visible');
+      previewSection.classList.add('visible');
+      exportBar.classList.add('visible');
+    }
+
+    function hideUI() {
+      presetsSection.style.display = 'none';
+      controlsCard.classList.remove('visible');
+      previewSection.classList.remove('visible');
+      exportBar.classList.remove('visible');
+      fileInfo.classList.remove('visible');
+    }
+
+    // --- Canvases ---
     function setupCanvases() {
-      const w = originalCanvas.parentElement.clientWidth;
-      const h = originalCanvas.parentElement.clientHeight;
-      originalCanvas.width = previewCanvas.width = w;
-      originalCanvas.height = previewCanvas.height = h;
+      const wrap1 = originalCanvas.parentElement;
+      const wrap2 = previewCanvas.parentElement;
+      originalCanvas.width = wrap1.clientWidth;
+      originalCanvas.height = wrap1.clientHeight;
+      previewCanvas.width = wrap2.clientWidth;
+      previewCanvas.height = wrap2.clientHeight;
       drawContain(ctxOriginal, image, originalCanvas);
       drawContain(ctx, image, previewCanvas);
-      clearSVG();
       enablePanZoom(originalCanvas);
       enablePanZoom(previewCanvas);
     }
 
-    function sync(rangeEl, numEl) {
-      rangeEl.addEventListener('input', () => { numEl.value = rangeEl.value; applyFilters(); });
-      numEl.addEventListener('input', () => {
-        let v = Number(numEl.value);
-        v = Math.min(Math.max(v, Number(rangeEl.min)), Number(rangeEl.max));
-        rangeEl.value = v;
-        applyFilters();
-      });
-    }
-    sync(contrastSlider, contrastNumber);
-    sync(thresholdSlider, thresholdNumber);
-    contrastSlider.addEventListener('input', applyFilters);
-    thresholdSlider.addEventListener('input', applyFilters);
-    bwMode.addEventListener('change', applyFilters);
-
-    function applyFilters() {
-      const c = +contrastSlider.value, t = +thresholdSlider.value;
-      drawContain(ctx, image, previewCanvas);
-      const data = ctx.getImageData(0, 0, previewCanvas.width, previewCanvas.height);
-      const arr = data.data, f = (259*(c+255))/(255*(259-c));
-      for (let i = 0; i < arr.length; i += 4) {
-        arr[i] = f*(arr[i]-128)+128;
-        arr[i+1] = f*(arr[i+1]-128)+128;
-        arr[i+2] = f*(arr[i+2]-128)+128;
-        if (bwMode.checked) {
-          const avg = (arr[i]+arr[i+1]+arr[i+2]) / 3;
-          const v = avg < t ? 0 : 255;
-          arr[i] = arr[i+1] = arr[i+2] = v;
-        }
-      }
-      ctx.putImageData(data, 0, 0);
-      vectorize();
-    }
-
-    function drawContain(ctx, img, canvas) {
-      const cw = canvas.width, ch = canvas.height;
-      const iw = img.width, ih = img.height;
-      const scale = Math.min(cw/iw, ch/ih);
-      const sw = iw * scale, sh = ih * scale;
+    function drawContain(c, img, cvs) {
+      const cw = cvs.width, ch = cvs.height;
+      const scale = Math.min(cw / img.width, ch / img.height);
+      const sw = img.width * scale, sh = img.height * scale;
       const dx = (cw - sw) / 2, dy = (ch - sh) / 2;
-      ctx.clearRect(0, 0, cw, ch);
-      ctx.drawImage(img, 0, 0, iw, ih, dx, dy, sw, sh);
+      c.clearRect(0, 0, cw, ch);
+      c.drawImage(img, 0, 0, img.width, img.height, dx, dy, sw, sh);
     }
 
     function enablePanZoom(el) {
       let dragging = false, sx, sy, ox = 0, oy = 0, zoom = 1;
       el.style.transformOrigin = 'center center';
       el.addEventListener('wheel', e => {
-        e.preventDefault(); zoom += e.deltaY < 0 ? 0.1 : -0.1;
+        e.preventDefault();
+        zoom += e.deltaY < 0 ? 0.1 : -0.1;
         zoom = Math.max(0.5, Math.min(zoom, 10));
         el.style.transform = `translate(${ox}px,${oy}px) scale(${zoom})`;
+      }, { passive: false });
+      el.addEventListener('mousedown', e => {
+        dragging = true; sx = e.clientX - ox; sy = e.clientY - oy;
+        el.style.cursor = 'grabbing';
       });
-      el.addEventListener('mousedown', e => { dragging = true; sx = e.clientX - ox; sy = e.clientY - oy; el.style.cursor = 'grabbing'; });
-      window.addEventListener('mousemove', e => { if (!dragging) return; ox = e.clientX - sx; oy = e.clientY - sy; el.style.transform = `translate(${ox}px,${oy}px) scale(${zoom})`; });
+      window.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        ox = e.clientX - sx; oy = e.clientY - sy;
+        el.style.transform = `translate(${ox}px,${oy}px) scale(${zoom})`;
+      });
       window.addEventListener('mouseup', () => { dragging = false; el.style.cursor = 'grab'; });
+    }
+
+    // --- Sync sliders ---
+    Object.values(sliders).forEach(({ range, num }) => {
+      range.addEventListener('input', () => { num.value = range.value; debouncedProcess(); });
+      num.addEventListener('input', () => {
+        let v = Number(num.value);
+        v = Math.min(Math.max(v, Number(range.min)), Number(range.max));
+        range.value = v;
+        debouncedProcess();
+      });
+    });
+    bwMode.addEventListener('change', debouncedProcess);
+    invertMode.addEventListener('change', debouncedProcess);
+
+    // --- Presets ---
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const p = presets[btn.dataset.preset];
+        if (!p) return;
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        sliders.contrast.range.value = sliders.contrast.num.value = p.contrast;
+        sliders.threshold.range.value = sliders.threshold.num.value = p.threshold;
+        sliders.colors.range.value = sliders.colors.num.value = p.colors;
+        sliders.precision.range.value = sliders.precision.num.value = p.precision;
+        sliders.pathomit.range.value = sliders.pathomit.num.value = p.pathomit;
+        sliders.blur.range.value = sliders.blur.num.value = p.blur;
+        bwMode.checked = p.bw;
+        invertMode.checked = p.invert;
+        debouncedProcess();
+      });
+    });
+
+    // --- Processing ---
+    function debouncedProcess() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(process, 150);
+    }
+
+    function process() {
+      if (!originalDataUrl) return;
+      loadingOverlay.classList.add('visible');
+
+      requestAnimationFrame(() => {
+        applyFilters();
+        vectorize();
+        loadingOverlay.classList.remove('visible');
+      });
+    }
+
+    function applyFilters() {
+      drawContain(ctx, image, previewCanvas);
+      const data = ctx.getImageData(0, 0, previewCanvas.width, previewCanvas.height);
+      const arr = data.data;
+      const c = +sliders.contrast.range.value;
+      const t = +sliders.threshold.range.value;
+      const f = (259 * (c + 255)) / (255 * (259 - c));
+      const inv = invertMode.checked;
+      const bw = bwMode.checked;
+
+      for (let i = 0; i < arr.length; i += 4) {
+        // Contrast
+        arr[i]   = f * (arr[i] - 128) + 128;
+        arr[i+1] = f * (arr[i+1] - 128) + 128;
+        arr[i+2] = f * (arr[i+2] - 128) + 128;
+
+        // B&W
+        if (bw) {
+          const avg = (arr[i] + arr[i+1] + arr[i+2]) / 3;
+          const v = avg < t ? 0 : 255;
+          arr[i] = arr[i+1] = arr[i+2] = v;
+        }
+
+        // Invert
+        if (inv) {
+          arr[i]   = 255 - arr[i];
+          arr[i+1] = 255 - arr[i+1];
+          arr[i+2] = 255 - arr[i+2];
+        }
+      }
+      ctx.putImageData(data, 0, 0);
+
+      // Apply blur if needed
+      const blur = +sliders.blur.range.value;
+      if (blur > 0) {
+        ctx.filter = `blur(${blur}px)`;
+        ctx.drawImage(previewCanvas, 0, 0);
+        ctx.filter = 'none';
+      }
     }
 
     function vectorize() {
       if (!originalDataUrl) return;
       const imageData = ctx.getImageData(0, 0, previewCanvas.width, previewCanvas.height);
-      lastSVG = ImageTracer.imagedataToSVG(imageData, { ltres:1, qtres:1, numberofcolors:4, colorquantcycles:3, pathomit:1, strokewidth:0 });
-      const svgEl = new DOMParser().parseFromString(lastSVG, 'image/svg+xml').documentElement;
-      clearSVG();
-      filteredPreview.appendChild(svgEl);
-    }
+      const precision = +sliders.precision.range.value;
+      const colors = +sliders.colors.range.value;
+      const pathomit = +sliders.pathomit.range.value;
 
-    function clearSVG() {
-      const existing = filteredPreview.querySelector('svg');
+      lastSVG = ImageTracer.imagedataToSVG(imageData, {
+        ltres: precision,
+        qtres: precision,
+        numberofcolors: colors,
+        colorquantcycles: 3,
+        pathomit: pathomit,
+        strokewidth: 0,
+      });
+
+      // Display SVG
+      const existing = svgContainer.querySelector('svg');
       if (existing) existing.remove();
+      const svgEl = new DOMParser().parseFromString(lastSVG, 'image/svg+xml').documentElement;
+      svgContainer.appendChild(svgEl);
+
+      // Update size info
+      const sizeKo = (new Blob([lastSVG]).size / 1024).toFixed(1);
+      svgSizeEl.textContent = sizeKo + ' Ko';
     }
 
-    function resetImage() {
-      if (!originalDataUrl) return;
-      image.src = originalDataUrl;
-      contrastSlider.value = contrastNumber.value = 0;
-      thresholdSlider.value = thresholdNumber.value = 128;
+    // --- Actions ---
+    resetBtn.addEventListener('click', resetAll);
+
+    function resetAll() {
+      originalDataUrl = null;
+      lastSVG = '';
+      imageLoader.value = '';
+      ctxOriginal.clearRect(0, 0, originalCanvas.width, originalCanvas.height);
+      ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+      const existing = svgContainer.querySelector('svg');
+      if (existing) existing.remove();
+
+      // Reset sliders to defaults
+      sliders.contrast.range.value = sliders.contrast.num.value = 0;
+      sliders.threshold.range.value = sliders.threshold.num.value = 128;
+      sliders.colors.range.value = sliders.colors.num.value = 8;
+      sliders.precision.range.value = sliders.precision.num.value = 1;
+      sliders.pathomit.range.value = sliders.pathomit.num.value = 2;
+      sliders.blur.range.value = sliders.blur.num.value = 0;
       bwMode.checked = false;
-      clearSVG();
-      image.onload = () => setupCanvases();
+      invertMode.checked = false;
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+
+      hideUI();
     }
 
-    function downloadSVG() {
+    downloadBtn.addEventListener('click', () => {
       if (!lastSVG) return alert("Vectorise d'abord !");
       const blob = new Blob([lastSVG], { type: 'image/svg+xml' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'image.svg';
+      a.download = (fileName.textContent || 'image').replace(/\.[^.]+$/, '') + '.svg';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    }
-
-    vectorizeBtn.addEventListener('click', vectorize);
-    resetBtn.addEventListener('click', resetImage);
-    downloadBtn.addEventListener('click', downloadSVG);
+    });
   </script>
 </body>
 </html>
