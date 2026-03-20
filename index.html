@@ -3,315 +3,725 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Générateur Moodboard Avancé</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap" rel="stylesheet">
+  <title>Presentation Maker – Moodboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    :root { --bg-color: #ffffff; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Montserrat', sans-serif; background: #f5f5f5; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-    .controls, .ratios { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
-    .controls label { display: flex; flex-direction: column; align-items: center; font-size: 14px; text-transform: uppercase; gap: 10px; }
-    .controls input[type=range], .controls button, .controls select { font-size: 14px; text-transform: uppercase; cursor: pointer; padding: 6px 12px; border-radius: 6px; border: 1px solid #ccc; background: #eee; color: #000; }
-    .switch-btn, .scale-btn { min-width: 50px; height: 40px; }
-    .scale-btn.active { background: #ccc; }
-    .moodboard { background: var(--bg-color); width: 100%; max-width: 1400px; padding: 20px; border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
-    #canvas { width: 100%; aspect-ratio: 4/3; background: var(--bg-color); overflow: auto; position: relative; }
-    .grid { display: flex; width: 100%; height: 100%; gap: var(--gap,20px); }
-    .grid-column, .grid-row { display: flex; gap: var(--gap,20px); }
+    :root {
+      --bg: #f5f5f7;
+      --card: #ffffff;
+      --border: #e5e5ea;
+      --text: #1d1d1f;
+      --text2: #6e6e73;
+      --accent: #0071e3;
+      --accent-hover: #0077ed;
+      --shadow: 0 2px 12px rgba(0,0,0,0.08);
+      --shadow-hover: 0 4px 20px rgba(0,0,0,0.12);
+      --radius: 14px;
+      --radius-sm: 10px;
+      --transition: 0.2s ease;
+      --board-bg: #ffffff;
+      --gap: 12px;
+      --cell-radius: 12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Montserrat', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Header */
+    .header { text-align: center; padding: 6px 0; }
+    .header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+    .header p { font-size: 0.8rem; color: var(--text2); margin-top: 2px; }
+
+    /* Controls Card */
+    .controls-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: flex-end;
+    }
+    .control-item { display: flex; flex-direction: column; gap: 5px; }
+    .control-item label { font-size: 0.7rem; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; }
+    .control-item .slider-row { display: flex; align-items: center; gap: 6px; }
+    .control-item input[type="range"] {
+      width: 80px; height: 4px; -webkit-appearance: none; appearance: none;
+      background: var(--border); border-radius: 2px; outline: none;
+    }
+    .control-item input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+      background: var(--accent); cursor: pointer; border: 2px solid #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .control-item input[type="number"] {
+      width: 38px; padding: 3px 4px; border: 1px solid var(--border);
+      border-radius: 6px; font-size: 0.7rem; font-family: inherit; text-align: center; outline: none;
+    }
+    .control-item input[type="number"]:focus { border-color: var(--accent); }
+    .control-item input[type="color"] {
+      width: 36px; height: 30px; border: 1px solid var(--border); border-radius: 6px;
+      cursor: pointer; padding: 2px;
+    }
+
+    /* Presets & Ratio buttons */
+    .presets-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .presets-row .section-label {
+      font-size: 0.68rem; font-weight: 600; color: var(--text2);
+      text-transform: uppercase; letter-spacing: 0.04em;
+      display: flex; align-items: center; margin-right: 4px;
+    }
+    .preset-btn, .ratio-btn {
+      padding: 5px 10px; border: 1.5px solid var(--border); border-radius: 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600;
+      cursor: pointer; background: var(--bg); color: var(--text);
+      transition: all var(--transition);
+    }
+    .preset-btn:hover, .ratio-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .preset-btn.active, .ratio-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .presets-divider { width: 1px; background: var(--border); margin: 0 6px; align-self: stretch; }
+
+    /* Board */
+    .board-wrapper {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px;
+      overflow: hidden;
+    }
+    .board {
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: var(--board-bg);
+      border-radius: var(--cell-radius);
+      overflow: hidden;
+      position: relative;
+    }
+    .grid {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      gap: var(--gap);
+      padding: var(--board-padding, 0px);
+    }
+    .grid-column, .grid-row {
+      display: flex;
+      gap: var(--gap);
+    }
     .grid-column { flex-direction: column; flex: 1; }
     .grid-row { flex-direction: row; flex: 1; }
-    .grid-item { background: #ddd; border-radius: var(--radius,20px); position: relative; overflow: hidden; flex: 1; }
-    .img-wrapper { width: 100%; height: 100%; position: relative; overflow: hidden; cursor: grab; background-repeat: no-repeat; background-position: center center; background-size: 100% auto; }
-    .file-input { position: absolute; top:0; left:0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 
-    /* responsive breakpoints inspirés de Dribbble */
-    @media (max-width: 1200px) {
-      .controls { gap: 16px; padding: 0 10px; }
+    .grid-item {
+      background: #f0f0f3;
+      border-radius: var(--cell-radius);
+      position: relative;
+      overflow: hidden;
+      flex: 1;
+      transition: background var(--transition);
     }
-    @media (max-width: 1024px) {
-      .controls { flex-direction: row; flex-wrap: wrap; gap: 12px; }
-      .moodboard { padding: 15px; }
+    .grid-item:hover { background: #e8e8eb; }
+    .grid-item.dragover { background: #dbeafe; outline: 2px dashed var(--accent); outline-offset: -2px; }
+
+    .img-wrapper {
+      width: 100%; height: 100%; position: relative; overflow: hidden;
+      cursor: grab; background-repeat: no-repeat;
+      background-position: center center; background-size: cover;
+      display: flex; align-items: center; justify-content: center;
     }
+    .img-wrapper.has-image { cursor: grab; }
+    .img-wrapper:not(.has-image)::after {
+      content: '';
+      width: 28px; height: 28px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23bbb' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpath d='m21 15-5-5L5 21'/%3E%3C/svg%3E");
+      background-size: contain;
+      opacity: 0.5;
+    }
+
+    .file-input {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      opacity: 0; cursor: pointer; z-index: 2;
+    }
+    .img-wrapper.has-image .file-input { display: none; }
+
+    /* Delete button on cells */
+    .cell-delete {
+      display: none; position: absolute; top: 4px; right: 4px; z-index: 5;
+      width: 22px; height: 22px; border-radius: 50%; border: none;
+      background: rgba(0,0,0,0.5); color: #fff; cursor: pointer;
+      font-size: 12px; line-height: 1; align-items: center; justify-content: center;
+    }
+    .grid-item:hover .cell-delete.visible { display: flex; }
+
+    /* Export Bar */
+    .export-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 10px 16px;
+    }
+    .export-info { font-size: 0.75rem; color: var(--text2); display: flex; align-items: center; gap: 8px; }
+    .export-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+    .btn {
+      padding: 8px 14px; border: none; border-radius: var(--radius-sm);
+      font-family: inherit; font-size: 0.75rem; font-weight: 600;
+      cursor: pointer; transition: all var(--transition); display: inline-flex;
+      align-items: center; gap: 4px;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); box-shadow: var(--shadow-hover); }
+    .btn-secondary { background: var(--bg); color: var(--text); border: 1.5px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    .export-select {
+      padding: 8px 10px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      font-family: inherit; font-size: 0.75rem; font-weight: 600; outline: none;
+      background: var(--bg); cursor: pointer;
+    }
+    .scale-btns { display: flex; gap: 3px; }
+    .scale-btn {
+      padding: 5px 8px; border: 1.5px solid var(--border); border-radius: 6px;
+      font-family: inherit; font-size: 0.68rem; font-weight: 600;
+      cursor: pointer; background: var(--bg); color: var(--text);
+      transition: all var(--transition);
+    }
+    .scale-btn:hover { border-color: var(--accent); }
+    .scale-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* Loading */
+    .loading-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(255,255,255,0.8); align-items: center; justify-content: center;
+      z-index: 100; flex-direction: column; gap: 10px;
+    }
+    .loading-overlay.visible { display: flex; }
+    .spinner {
+      width: 32px; height: 32px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    .loading-text { font-size: 0.8rem; color: var(--text2); font-weight: 500; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Responsive */
     @media (max-width: 768px) {
-      body {
-        flex-direction: column;
-        padding: 20px 10px;
-      }
-      .controls {
-        order: -1; /* passe les contrôles au-dessus du canvas */
-        width: 100%;
-        overflow-x: auto;
-        justify-content: flex-start;
-        gap: 10px;
-        flex-wrap: nowrap;
-        padding-bottom: 10px;
-      }
-      .controls label,
-      .controls button,
-      .controls select,
-      .ratios button {
-        flex: 0 0 auto;
-        font-size: 12px;
-      }
-      .moodboard {
-        width: 100%;
-        padding: 10px;
-        box-shadow: none;
-        border-radius: 10px;
-      }
-      #canvas {
-        aspect-ratio: auto;
-        height: auto;
-      }
+      .controls-row { gap: 10px; }
+      .control-item input[type="range"] { width: 60px; }
+      .export-bar { flex-direction: column; text-align: center; }
+      .presets-row { justify-content: center; }
+    }
+    @media (max-width: 480px) {
+      .board { aspect-ratio: 1/1; }
     }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-  <div class="controls">
-    <label>Colonnes<input type="range" id="colSlider" min="1" max="5" value="3"></label>
-    <label>Lignes<input type="range" id="rowSlider" min="1" max="4" value="3"></label>
-    <label>Espacement<input type="range" id="gapSlider" min="0" max="50" value="20"></label>
-    <label>Arrondi<input type="range" id="radiusSlider" min="0" max="50" value="20"></label>
-    <label>Décalage<input type="range" id="offsetAmount" min="0" max="1" step="1" value="0"></label>
-    <button class="switch-btn" id="offsetTypeBtn">Horizontal</button>
-    <label>Marges (px)<input type="range" id="marginSlider" min="0" max="100" value="0"></label>
-    <label>Fond<input type="color" id="bgColorPicker" value="#ffffff"></label>
-    <button id="undoBtn">⟲ Retour</button>
-    <button id="redoBtn">⟲ Avancer</button>
-    <div>
-      <span>Echelle :</span>
-      <button class="scale-btn active" data-scale="1">1x</button>
-      <button class="scale-btn" data-scale="2">2x</button>
-      <button class="scale-btn" data-scale="3">3x</button>
-      <button class="scale-btn" data-scale="4">4x</button>
+  <div class="app">
+    <div class="header">
+      <h1>Presentation Maker</h1>
+      <p>Cr&eacute;ez des moodboards et pr&eacute;sentations visuelles en quelques clics</p>
     </div>
-    <select id="formatSelect">
-      <option value="png">PNG</option>
-      <option value="jpg">JPG</option>
-      <option value="webp">WEBP</option>
-      <option value="pdf">PDF</option>
-    </select>
-    <button id="downloadBtn">Télécharger</button>
+
+    <!-- Controls -->
+    <div class="controls-card">
+      <div class="controls-row">
+        <div class="control-item">
+          <label>Colonnes</label>
+          <div class="slider-row">
+            <input type="range" id="colSlider" min="1" max="6" value="3">
+            <input type="number" id="colNumber" min="1" max="6" value="3">
+          </div>
+        </div>
+        <div class="control-item">
+          <label>Lignes</label>
+          <div class="slider-row">
+            <input type="range" id="rowSlider" min="1" max="5" value="3">
+            <input type="number" id="rowNumber" min="1" max="5" value="3">
+          </div>
+        </div>
+        <div class="control-item">
+          <label>Espacement</label>
+          <div class="slider-row">
+            <input type="range" id="gapSlider" min="0" max="40" value="12">
+            <input type="number" id="gapNumber" min="0" max="40" value="12">
+          </div>
+        </div>
+        <div class="control-item">
+          <label>Arrondi</label>
+          <div class="slider-row">
+            <input type="range" id="radiusSlider" min="0" max="50" value="12">
+            <input type="number" id="radiusNumber" min="0" max="50" value="12">
+          </div>
+        </div>
+        <div class="control-item">
+          <label>Marges</label>
+          <div class="slider-row">
+            <input type="range" id="marginSlider" min="0" max="60" value="12">
+            <input type="number" id="marginNumber" min="0" max="60" value="12">
+          </div>
+        </div>
+        <div class="control-item">
+          <label>Fond</label>
+          <input type="color" id="bgColorPicker" value="#ffffff">
+        </div>
+      </div>
+
+      <!-- Presets & Ratios -->
+      <div class="presets-row">
+        <span class="section-label">Layout</span>
+        <button class="preset-btn" data-preset="grid33">3&times;3</button>
+        <button class="preset-btn" data-preset="grid23">2&times;3</button>
+        <button class="preset-btn" data-preset="grid22">2&times;2</button>
+        <button class="preset-btn" data-preset="pinterest">Pinterest</button>
+        <button class="preset-btn" data-preset="hero">Hero + grille</button>
+        <button class="preset-btn" data-preset="split">Split</button>
+
+        <div class="presets-divider"></div>
+
+        <span class="section-label">Ratio</span>
+        <button class="ratio-btn" data-ratio="4/3">4:3</button>
+        <button class="ratio-btn active" data-ratio="4/3">4:3</button>
+        <button class="ratio-btn" data-ratio="16/9">16:9</button>
+        <button class="ratio-btn" data-ratio="1/1">1:1</button>
+        <button class="ratio-btn" data-ratio="3/4">3:4</button>
+        <button class="ratio-btn" data-ratio="2/1">2:1</button>
+      </div>
+    </div>
+
+    <!-- Board -->
+    <div class="board-wrapper">
+      <div class="board" id="board">
+        <div class="grid" id="grid"></div>
+      </div>
+    </div>
+
+    <!-- Export Bar -->
+    <div class="export-bar">
+      <div class="export-info">
+        <span>Cliquez sur une cellule pour ajouter une image &bull; Glissez pour repositionner &bull; Molette pour zoomer</span>
+      </div>
+      <div class="export-actions">
+        <button class="btn btn-secondary" id="resetBtn">R&eacute;initialiser</button>
+        <div class="scale-btns">
+          <button class="scale-btn active" data-scale="1">1x</button>
+          <button class="scale-btn" data-scale="2">2x</button>
+          <button class="scale-btn" data-scale="3">3x</button>
+        </div>
+        <select class="export-select" id="formatSelect">
+          <option value="png">PNG</option>
+          <option value="jpg">JPG</option>
+          <option value="webp">WEBP</option>
+          <option value="pdf">PDF</option>
+        </select>
+        <button class="btn btn-primary" id="downloadBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          T&eacute;l&eacute;charger
+        </button>
+      </div>
+    </div>
   </div>
-  <div class="ratios">
-    <button onclick="setRatio(4,3)">4:3</button>
-    <button onclick="setRatio(1,1)">1:1</button>
-    <button onclick="setRatio(3,4)">3:4</button>
-    <button onclick="setRatio(4,2)">4:2</button>
-    <button onclick="setRatio(16,9)">16:9</button>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text">Export en cours&hellip;</div>
   </div>
-  <div class="moodboard">
-    <div id="canvas"><div class="grid" id="grid"></div></div>
-  </div>
-<script>
-let historyStates = [], historyIndex = -1, exportScale = 1, offsetType = 'horizontal';
-const grid = document.getElementById('grid'), canvas = document.getElementById('canvas');
-const colSlider = document.getElementById('colSlider'), rowSlider = document.getElementById('rowSlider');
-const gapSlider = document.getElementById('gapSlider'), radiusSlider = document.getElementById('radiusSlider');
-const offsetSlider = document.getElementById('offsetAmount'), marginSlider = document.getElementById('marginSlider');
-const bgPicker = document.getElementById('bgColorPicker');
-const undoBtn = document.getElementById('undoBtn'), redoBtn = document.getElementById('redoBtn');
-const offsetBtn = document.getElementById('offsetTypeBtn');
-const scaleBtns = document.querySelectorAll('.scale-btn');
-const fmtSelect = document.getElementById('formatSelect'), dlBtn = document.getElementById('downloadBtn');
 
-function saveState(){ historyStates=historyStates.slice(0,historyIndex+1); historyStates.push(grid.innerHTML); historyIndex=historyStates.length-1; }
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+  (function() {
+    const $ = id => document.getElementById(id);
+    const board = $('board');
+    const grid = $('grid');
+    const colSlider = $('colSlider'), colNumber = $('colNumber');
+    const rowSlider = $('rowSlider'), rowNumber = $('rowNumber');
+    const gapSlider = $('gapSlider'), gapNumber = $('gapNumber');
+    const radiusSlider = $('radiusSlider'), radiusNumber = $('radiusNumber');
+    const marginSlider = $('marginSlider'), marginNumber = $('marginNumber');
+    const bgPicker = $('bgColorPicker');
+    const fmtSelect = $('formatSelect');
+    const dlBtn = $('downloadBtn');
+    const resetBtn = $('resetBtn');
+    const loadingOverlay = $('loadingOverlay');
 
-bgPicker.addEventListener('input', ()=> document.documentElement.style.setProperty('--bg-color', bgPicker.value));
-[gapSlider,radiusSlider].forEach(s=> s.addEventListener('input', ()=>{ document.documentElement.style.setProperty(`--${s.id.replace('Slider','')}`, s.value+'px'); createGrid(); }));
-[colSlider,rowSlider,offsetSlider,marginSlider].forEach(s=> s.addEventListener('input', createGrid));
+    let exportScale = 1;
+    let cellImages = {}; // store images by cell index
 
-undoBtn.addEventListener('click', ()=>{ if(historyIndex>0) grid.innerHTML=historyStates[--historyIndex]; });
-redoBtn.addEventListener('click', ()=>{ if(historyIndex<historyStates.length-1) grid.innerHTML=historyStates[++historyIndex]; });
-offsetBtn.addEventListener('click', ()=>{ offsetType=offsetType==='horizontal'?'vertical':'horizontal'; offsetBtn.textContent=offsetType.charAt(0).toUpperCase()+offsetType.slice(1); createGrid(); });
-scaleBtns.forEach(btn=> btn.addEventListener('click', ()=>{ scaleBtns.forEach(b=>b.classList.remove('active')); btn.classList.add('active'); exportScale=+btn.dataset.scale; }));
-function setRatio(w,h){ canvas.style.aspectRatio=`${w}/${h}`; }
+    // --- Sync sliders ---
+    function syncSlider(range, num, cb) {
+      range.addEventListener('input', () => { num.value = range.value; cb(); });
+      num.addEventListener('input', () => {
+        let v = Math.min(Math.max(Number(num.value), Number(range.min)), Number(range.max));
+        range.value = v; cb();
+      });
+    }
 
-function createCell(parent) {
-  const radius = +radiusSlider.value;
-  const item = document.createElement('div');
-  item.className = 'grid-item';
-  item.style.borderRadius = radius + 'px';
+    function updateBoard() {
+      saveCellImages();
+      const gap = +gapSlider.value;
+      const radius = +radiusSlider.value;
+      const margin = +marginSlider.value;
+      document.documentElement.style.setProperty('--gap', gap + 'px');
+      document.documentElement.style.setProperty('--cell-radius', radius + 'px');
+      document.documentElement.style.setProperty('--board-padding', margin + 'px');
+      createGrid();
+    }
 
-  const wrapper = document.createElement('div');
-  wrapper.className = 'img-wrapper';
-  wrapper.dataset.posX = 0;
-  wrapper.dataset.posY = 0;
-  wrapper.dataset.scale = 1;
-  wrapper.dataset.ratio = 1;
+    syncSlider(colSlider, colNumber, updateBoard);
+    syncSlider(rowSlider, rowNumber, updateBoard);
+    syncSlider(gapSlider, gapNumber, updateBoard);
+    syncSlider(radiusSlider, radiusNumber, updateBoard);
+    syncSlider(marginSlider, marginNumber, updateBoard);
 
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.className = 'file-input';
+    bgPicker.addEventListener('input', () => {
+      document.documentElement.style.setProperty('--board-bg', bgPicker.value);
+    });
 
-  let isDragging = false;
-  let startX, startY, baseX, baseY;
-  function onMouseDown(e) {
-    if (!wrapper.style.backgroundImage) return;
-    isDragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    baseX = +wrapper.dataset.posX;
-    baseY = +wrapper.dataset.posY;
-    wrapper.style.cursor = 'grabbing';
-  }
-  function onMouseUp() {
-    isDragging = false;
-    wrapper.style.cursor = 'grab';
-  }
-  function onMouseMove(e) {
-    if (!isDragging) return;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    let x = baseX + dx;
-    let y = baseY + dy;
-    const sc = +wrapper.dataset.scale;
-    const r = +wrapper.dataset.ratio;
-    const w = wrapper.clientWidth;
-    const h = wrapper.clientHeight;
-    let sw = w * sc;
-    let sh = sw * r;
-    if (sh < h * sc) { sh = h * sc; sw = sh / r; }
-    const maxX = (sw - w) / 2;
-    const maxY = (sh - h) / 2;
-    x = Math.max(-maxX, Math.min(maxX, x));
-    y = Math.max(-maxY, Math.min(maxY, y));
-    wrapper.dataset.posX = x;
-    wrapper.dataset.posY = y;
-    wrapper.style.backgroundPosition = `calc(50% + ${x}px) calc(50% + ${y}px)`;
-  }
-  function onWheel(e) {
-    e.preventDefault();
-    let sc = +wrapper.dataset.scale;
-    sc += e.deltaY < 0 ? 0.1 : -0.1;
-    sc = Math.min(5, Math.max(1, sc));
-    wrapper.dataset.scale = sc;
-    wrapper.style.backgroundSize = `${sc*100}% auto`;
-    const x = +wrapper.dataset.posX;
-    const y = +wrapper.dataset.posY;
-    wrapper.style.backgroundPosition = `calc(50% + ${x}px) calc(50% + ${y}px)`;
-  }
-  function onDoubleClick() {
-    wrapper.style.backgroundImage = '';
-    wrapper.dataset.posX = 0;
-    wrapper.dataset.posY = 0;
-    wrapper.dataset.scale = 1;
-    wrapper.dataset.ratio = 1;
-  }
+    // --- Presets ---
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const p = btn.dataset.preset;
+        cellImages = {};
+        switch(p) {
+          case 'grid33': setSliders(3,3,12,12,12); break;
+          case 'grid23': setSliders(2,3,12,12,12); break;
+          case 'grid22': setSliders(2,2,12,12,12); break;
+          case 'pinterest': setSliders(3,4,8,8,8); break;
+          case 'hero': setSliders(3,2,10,12,10); break;
+          case 'split': setSliders(2,1,0,0,0); break;
+        }
+        updateBoard();
+      });
+    });
 
-  function onInputChange() {
-    const file = input.files[0];
-    if (!file || !file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.src = reader.result;
-      img.onload = () => {
-        wrapper.dataset.ratio = img.height / img.width;
-        wrapper.style.backgroundImage = `url(${reader.result})`;
-        wrapper.dataset.scale = 1;
+    function setSliders(cols, rows, gap, radius, margin) {
+      colSlider.value = colNumber.value = cols;
+      rowSlider.value = rowNumber.value = rows;
+      gapSlider.value = gapNumber.value = gap;
+      radiusSlider.value = radiusNumber.value = radius;
+      marginSlider.value = marginNumber.value = margin;
+      document.documentElement.style.setProperty('--gap', gap + 'px');
+      document.documentElement.style.setProperty('--cell-radius', radius + 'px');
+      document.documentElement.style.setProperty('--board-padding', margin + 'px');
+    }
+
+    // --- Ratio buttons ---
+    // Remove duplicate 4:3 button
+    const ratioBtns = document.querySelectorAll('.ratio-btn');
+    ratioBtns.forEach((btn, i) => {
+      // Skip duplicate first 4:3
+      if (i === 0) { btn.remove(); return; }
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.ratio-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        board.style.aspectRatio = btn.dataset.ratio;
+      });
+    });
+
+    // --- Scale buttons ---
+    document.querySelectorAll('.scale-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        exportScale = +btn.dataset.scale;
+      });
+    });
+
+    // --- Save/restore cell images ---
+    function saveCellImages() {
+      const wrappers = grid.querySelectorAll('.img-wrapper');
+      wrappers.forEach((w, i) => {
+        if (w.style.backgroundImage && w.style.backgroundImage !== '') {
+          cellImages[i] = {
+            bg: w.style.backgroundImage,
+            size: w.style.backgroundSize || 'cover',
+            pos: w.style.backgroundPosition || 'center center',
+            posX: w.dataset.posX || 0,
+            posY: w.dataset.posY || 0,
+            scale: w.dataset.scale || 1,
+            ratio: w.dataset.ratio || 1
+          };
+        }
+      });
+    }
+
+    function restoreCellImages() {
+      const wrappers = grid.querySelectorAll('.img-wrapper');
+      wrappers.forEach((w, i) => {
+        if (cellImages[i]) {
+          const data = cellImages[i];
+          w.style.backgroundImage = data.bg;
+          w.style.backgroundSize = data.size;
+          w.style.backgroundPosition = data.pos;
+          w.dataset.posX = data.posX;
+          w.dataset.posY = data.posY;
+          w.dataset.scale = data.scale;
+          w.dataset.ratio = data.ratio;
+          w.classList.add('has-image');
+          const fi = w.querySelector('.file-input');
+          if (fi) fi.style.display = 'none';
+          const del = w.parentElement.querySelector('.cell-delete');
+          if (del) del.classList.add('visible');
+        }
+      });
+    }
+
+    // --- Create grid ---
+    function createGrid() {
+      grid.innerHTML = '';
+      const cols = +colSlider.value;
+      const rows = +rowSlider.value;
+
+      grid.style.flexDirection = 'column';
+      for (let r = 0; r < rows; r++) {
+        const row = document.createElement('div');
+        row.className = 'grid-row';
+        for (let c = 0; c < cols; c++) {
+          createCell(row, r * cols + c);
+        }
+        grid.append(row);
+      }
+      restoreCellImages();
+    }
+
+    function createCell(parent, idx) {
+      const item = document.createElement('div');
+      item.className = 'grid-item';
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'img-wrapper';
+      wrapper.dataset.posX = 0;
+      wrapper.dataset.posY = 0;
+      wrapper.dataset.scale = 1;
+      wrapper.dataset.ratio = 1;
+
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.className = 'file-input';
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'cell-delete';
+      deleteBtn.innerHTML = '&times;';
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        wrapper.style.backgroundImage = '';
+        wrapper.classList.remove('has-image');
         wrapper.dataset.posX = 0;
         wrapper.dataset.posY = 0;
-        wrapper.style.backgroundSize = '100% auto';
-        wrapper.style.backgroundPosition = '50% 50%';
-        wrapper.removeEventListener('click', onWrapperClick);
-        input.removeEventListener('change', onInputChange);
-        input.remove();
-        saveState();
-      };
-    };
-    reader.readAsDataURL(file);
-  }
+        wrapper.dataset.scale = 1;
+        wrapper.dataset.ratio = 1;
+        deleteBtn.classList.remove('visible');
+        input.style.display = '';
+        input.value = '';
+        delete cellImages[idx];
+      });
 
-  function onWrapperClick() {
-    input.click();
-  }
-
-  wrapper.addEventListener('click', onWrapperClick);
-  wrapper.addEventListener('mousedown', onMouseDown);
-  document.addEventListener('mouseup', onMouseUp);
-  document.addEventListener('mousemove', onMouseMove);
-  wrapper.addEventListener('wheel', onWheel);
-  wrapper.addEventListener('dblclick', onDoubleClick);
-  input.addEventListener('change', onInputChange);
-
-  item.append(wrapper, input);
-  parent.append(item);
-}
-
-function createGrid(){
-  grid.innerHTML=''; 
-  const cols=+colSlider.value, rows=+rowSlider.value, gap=+gapSlider.value, off=+offsetSlider.value, margin=+marginSlider.value;
-  document.documentElement.style.setProperty('--gap',gap+'px');
-  canvas.style.borderRadius=radiusSlider.value+'px';
-  canvas.style.padding=margin+'px';
-  
-  if(offsetType==='vertical'){
-    grid.style.flexDirection='row';
-    for(let c=0;c<cols;c++){
-      const col=document.createElement('div');
-      col.className='grid-column';
-      col.style.gap=gap+'px';
-      let count=rows;
-      if(off&&c!==Math.floor(cols/2)) count--;
-      for(let i=0;i<count;i++) createCell(col);
-      grid.append(col);
-    }
-  } else {
-    grid.style.flexDirection='column';
-    for(let r=0;r<rows;r++){
-      const row=document.createElement('div');
-      row.className='grid-row';
-      row.style.gap=gap+'px';
-      let count=cols;
-      if(off&&r!==Math.floor(rows/2)) count--;
-      for(let i=0;i<count;i++) createCell(row);
-      grid.append(row);
-    }
-  }
-  saveState();
-}
-
-createGrid();
-
-dlBtn.addEventListener('click', async () => {
-  try {
-    const cnv = await html2canvas(canvas, { scale: exportScale });
-    const fmt = fmtSelect.value;
-
-    // PDF
-    if (fmt === 'pdf') {
-      const img = cnv.toDataURL('image/png');
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ unit: 'px', format: [cnv.width, cnv.height] });
-      doc.addImage(img, 'PNG', 0, 0, cnv.width, cnv.height);
-      doc.save('moodboard.pdf');
-    } else {
-      // Fichier Blob dynamique
-      const mimeType = fmt === 'jpg' ? 'image/jpeg' : `image/${fmt}`;
-      cnv.toBlob(blob => {
-        if (!blob) {
-          alert('Erreur: impossible de générer le fichier');
-          return;
+      // Drag & drop on cell
+      item.addEventListener('dragover', (e) => { e.preventDefault(); item.classList.add('dragover'); });
+      item.addEventListener('dragleave', () => item.classList.remove('dragover'));
+      item.addEventListener('drop', (e) => {
+        e.preventDefault();
+        item.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+          loadImageIntoCell(file, wrapper, input, deleteBtn, idx);
         }
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `moodboard.${fmt}`;
-        document.body.append(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
-      }, mimeType);
+      });
+
+      // Mouse pan
+      let isDragging = false, startX, startY, baseX, baseY;
+
+      function onMouseDown(e) {
+        if (!wrapper.classList.contains('has-image')) return;
+        e.preventDefault();
+        isDragging = true;
+        startX = e.clientX; startY = e.clientY;
+        baseX = +wrapper.dataset.posX; baseY = +wrapper.dataset.posY;
+        wrapper.style.cursor = 'grabbing';
+      }
+      function onMouseUp() {
+        if (isDragging) { isDragging = false; wrapper.style.cursor = 'grab'; }
+      }
+      function onMouseMove(e) {
+        if (!isDragging) return;
+        const dx = e.clientX - startX, dy = e.clientY - startY;
+        let x = baseX + dx, y = baseY + dy;
+        const sc = +wrapper.dataset.scale;
+        const r = +wrapper.dataset.ratio;
+        const w = wrapper.clientWidth, h = wrapper.clientHeight;
+        let sw = w * sc, sh = sw * r;
+        if (sh < h * sc) { sh = h * sc; sw = sh / r; }
+        const maxX = (sw - w) / 2, maxY = (sh - h) / 2;
+        x = Math.max(-maxX, Math.min(maxX, x));
+        y = Math.max(-maxY, Math.min(maxY, y));
+        wrapper.dataset.posX = x; wrapper.dataset.posY = y;
+        wrapper.style.backgroundPosition = `calc(50% + ${x}px) calc(50% + ${y}px)`;
+      }
+
+      // Touch pan
+      function onTouchStart(e) {
+        if (!wrapper.classList.contains('has-image') || e.touches.length !== 1) return;
+        isDragging = true;
+        startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+        baseX = +wrapper.dataset.posX; baseY = +wrapper.dataset.posY;
+      }
+      function onTouchMove(e) {
+        if (!isDragging || e.touches.length !== 1) return;
+        e.preventDefault();
+        const dx = e.touches[0].clientX - startX, dy = e.touches[0].clientY - startY;
+        let x = baseX + dx, y = baseY + dy;
+        const sc = +wrapper.dataset.scale;
+        const r = +wrapper.dataset.ratio;
+        const w = wrapper.clientWidth, h = wrapper.clientHeight;
+        let sw = w * sc, sh = sw * r;
+        if (sh < h * sc) { sh = h * sc; sw = sh / r; }
+        const maxX = (sw - w) / 2, maxY = (sh - h) / 2;
+        x = Math.max(-maxX, Math.min(maxX, x));
+        y = Math.max(-maxY, Math.min(maxY, y));
+        wrapper.dataset.posX = x; wrapper.dataset.posY = y;
+        wrapper.style.backgroundPosition = `calc(50% + ${x}px) calc(50% + ${y}px)`;
+      }
+      function onTouchEnd() { isDragging = false; }
+
+      // Wheel zoom
+      function onWheel(e) {
+        if (!wrapper.classList.contains('has-image')) return;
+        e.preventDefault();
+        let sc = +wrapper.dataset.scale;
+        sc += e.deltaY < 0 ? 0.1 : -0.1;
+        sc = Math.min(5, Math.max(1, sc));
+        wrapper.dataset.scale = sc;
+        wrapper.style.backgroundSize = `${sc * 100}% auto`;
+        const x = +wrapper.dataset.posX, y = +wrapper.dataset.posY;
+        wrapper.style.backgroundPosition = `calc(50% + ${x}px) calc(50% + ${y}px)`;
+      }
+
+      // File input
+      input.addEventListener('change', () => {
+        const file = input.files[0];
+        if (!file || !file.type.startsWith('image/')) return;
+        loadImageIntoCell(file, wrapper, input, deleteBtn, idx);
+      });
+
+      wrapper.addEventListener('mousedown', onMouseDown);
+      document.addEventListener('mouseup', onMouseUp);
+      document.addEventListener('mousemove', onMouseMove);
+      wrapper.addEventListener('touchstart', onTouchStart, { passive: false });
+      wrapper.addEventListener('touchmove', onTouchMove, { passive: false });
+      wrapper.addEventListener('touchend', onTouchEnd);
+      wrapper.addEventListener('wheel', onWheel, { passive: false });
+
+      wrapper.append(input);
+      item.append(wrapper, deleteBtn);
+      parent.append(item);
     }
-  } catch (e) {
-    console.error(e);
-    alert('Échec de l\'export, réessayez');
-  }
-});
-</script>
+
+    function loadImageIntoCell(file, wrapper, input, deleteBtn, idx) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.src = reader.result;
+        img.onload = () => {
+          wrapper.dataset.ratio = img.height / img.width;
+          wrapper.style.backgroundImage = `url(${reader.result})`;
+          wrapper.style.backgroundSize = 'cover';
+          wrapper.style.backgroundPosition = 'center center';
+          wrapper.dataset.scale = 1;
+          wrapper.dataset.posX = 0;
+          wrapper.dataset.posY = 0;
+          wrapper.classList.add('has-image');
+          input.style.display = 'none';
+          deleteBtn.classList.add('visible');
+          cellImages[idx] = {
+            bg: wrapper.style.backgroundImage,
+            size: wrapper.style.backgroundSize,
+            pos: wrapper.style.backgroundPosition,
+            posX: 0, posY: 0, scale: 1, ratio: img.height / img.width
+          };
+        };
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // --- Reset ---
+    resetBtn.addEventListener('click', () => {
+      cellImages = {};
+      setSliders(3, 3, 12, 12, 12);
+      bgPicker.value = '#ffffff';
+      document.documentElement.style.setProperty('--board-bg', '#ffffff');
+      board.style.aspectRatio = '4/3';
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.ratio-btn').forEach(b => b.classList.remove('active'));
+      updateBoard();
+    });
+
+    // --- Download ---
+    dlBtn.addEventListener('click', async () => {
+      loadingOverlay.classList.add('visible');
+      try {
+        const cnv = await html2canvas(board, {
+          scale: exportScale,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: bgPicker.value
+        });
+        const fmt = fmtSelect.value;
+        if (fmt === 'pdf') {
+          const imgData = cnv.toDataURL('image/png');
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF({ unit: 'px', format: [cnv.width, cnv.height] });
+          doc.addImage(imgData, 'PNG', 0, 0, cnv.width, cnv.height);
+          doc.save('moodboard.pdf');
+        } else {
+          const mimeType = fmt === 'jpg' ? 'image/jpeg' : `image/${fmt}`;
+          cnv.toBlob(blob => {
+            if (!blob) { alert('Erreur export'); return; }
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `moodboard.${fmt}`;
+            document.body.append(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+          }, mimeType, 0.95);
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Export \u00e9chou\u00e9, r\u00e9essayez');
+      }
+      loadingOverlay.classList.remove('visible');
+    });
+
+    // Init
+    updateBoard();
+  })();
+  </script>
 </body>
 </html>
