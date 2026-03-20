@@ -81,6 +81,21 @@
       width: 36px; height: 30px; border: 1px solid var(--border); border-radius: 6px;
       cursor: pointer; padding: 2px;
     }
+    .control-item input[type="text"] {
+      padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px;
+      font-size: 0.75rem; font-family: inherit; outline: none; width: 120px;
+    }
+    .control-item input[type="text"]:focus { border-color: var(--accent); }
+
+    /* Toggle button */
+    .toggle-btn {
+      padding: 5px 10px; border: 1.5px solid var(--border); border-radius: 8px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 600;
+      cursor: pointer; background: var(--bg); color: var(--text);
+      transition: all var(--transition); min-width: 40px; text-align: center;
+    }
+    .toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .toggle-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
     /* Presets & Ratio buttons */
     .presets-row {
@@ -90,6 +105,7 @@
       margin-top: 10px;
       padding-top: 10px;
       border-top: 1px solid var(--border);
+      align-items: center;
     }
     .presets-row .section-label {
       font-size: 0.68rem; font-weight: 600; color: var(--text2);
@@ -106,6 +122,22 @@
     .preset-btn.active, .ratio-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
     .presets-divider { width: 1px; background: var(--border); margin: 0 6px; align-self: stretch; }
 
+    /* Overlay controls row */
+    .overlay-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      align-items: flex-end;
+    }
+    .overlay-row .section-label {
+      font-size: 0.68rem; font-weight: 600; color: var(--text2);
+      text-transform: uppercase; letter-spacing: 0.04em;
+      display: flex; align-items: center; margin-right: 4px; align-self: center;
+    }
+
     /* Board */
     .board-wrapper {
       background: var(--card);
@@ -121,6 +153,11 @@
       border-radius: var(--cell-radius);
       overflow: hidden;
       position: relative;
+    }
+    .board.full-height {
+      aspect-ratio: unset;
+      height: calc(100vh - 280px);
+      min-height: 400px;
     }
     .grid {
       display: flex;
@@ -177,6 +214,35 @@
     }
     .grid-item:hover .cell-delete.visible { display: flex; }
 
+    /* Overlay: logo & text */
+    .board-overlay {
+      position: absolute;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .board-overlay.pos-top-left { top: 20px; left: 20px; align-items: flex-start; }
+    .board-overlay.pos-top-center { top: 20px; left: 50%; transform: translateX(-50%); }
+    .board-overlay.pos-top-right { top: 20px; right: 20px; align-items: flex-end; }
+    .board-overlay.pos-center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+    .board-overlay.pos-bottom-left { bottom: 20px; left: 20px; align-items: flex-start; }
+    .board-overlay.pos-bottom-center { bottom: 20px; left: 50%; transform: translateX(-50%); }
+    .board-overlay.pos-bottom-right { bottom: 20px; right: 20px; align-items: flex-end; }
+
+    .overlay-logo {
+      max-width: 120px;
+      max-height: 60px;
+      object-fit: contain;
+    }
+    .overlay-text {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
     /* Export Bar */
     .export-bar {
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -232,9 +298,10 @@
       .control-item input[type="range"] { width: 60px; }
       .export-bar { flex-direction: column; text-align: center; }
       .presets-row { justify-content: center; }
+      .overlay-row { justify-content: center; }
     }
     @media (max-width: 480px) {
-      .board { aspect-ratio: 1/1; }
+      .board:not(.full-height) { aspect-ratio: 1/1; }
     }
   </style>
 </head>
@@ -287,6 +354,14 @@
           <label>Fond</label>
           <input type="color" id="bgColorPicker" value="#ffffff">
         </div>
+        <div class="control-item">
+          <label>Quinconce</label>
+          <button class="toggle-btn" id="offsetBtn">Off</button>
+        </div>
+        <div class="control-item">
+          <label>Direction</label>
+          <button class="toggle-btn" id="offsetDirBtn">H</button>
+        </div>
       </div>
 
       <!-- Presets & Ratios -->
@@ -302,12 +377,49 @@
         <div class="presets-divider"></div>
 
         <span class="section-label">Ratio</span>
-        <button class="ratio-btn" data-ratio="4/3">4:3</button>
         <button class="ratio-btn active" data-ratio="4/3">4:3</button>
         <button class="ratio-btn" data-ratio="16/9">16:9</button>
         <button class="ratio-btn" data-ratio="1/1">1:1</button>
         <button class="ratio-btn" data-ratio="3/4">3:4</button>
         <button class="ratio-btn" data-ratio="2/1">2:1</button>
+        <button class="ratio-btn" data-ratio="full">Plein</button>
+      </div>
+
+      <!-- Overlay: logo + texte -->
+      <div class="overlay-row">
+        <span class="section-label">Overlay</span>
+        <div class="control-item">
+          <label>Logo</label>
+          <button class="toggle-btn" id="logoUploadBtn" style="font-size:0.68rem">+ Logo</button>
+          <input type="file" id="logoInput" accept="image/*" style="display:none">
+        </div>
+        <div class="control-item">
+          <label>Texte</label>
+          <input type="text" id="overlayText" placeholder="Titre optionnel">
+        </div>
+        <div class="control-item">
+          <label>Taille texte</label>
+          <div class="slider-row">
+            <input type="range" id="overlayFontSize" min="12" max="72" value="24">
+            <input type="number" id="overlayFontSizeNum" min="12" max="72" value="24">
+          </div>
+        </div>
+        <div class="control-item">
+          <label>Couleur texte</label>
+          <input type="color" id="overlayColor" value="#ffffff">
+        </div>
+        <div class="control-item">
+          <label>Position</label>
+          <select id="overlayPosition" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.72rem;font-family:inherit;outline:none;background:#fff;cursor:pointer">
+            <option value="center">Centre</option>
+            <option value="top-left">Haut gauche</option>
+            <option value="top-center">Haut centre</option>
+            <option value="top-right">Haut droite</option>
+            <option value="bottom-left">Bas gauche</option>
+            <option value="bottom-center" selected>Bas centre</option>
+            <option value="bottom-right">Bas droite</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -315,6 +427,7 @@
     <div class="board-wrapper">
       <div class="board" id="board">
         <div class="grid" id="grid"></div>
+        <div class="board-overlay pos-bottom-center" id="boardOverlay"></div>
       </div>
     </div>
 
@@ -356,19 +469,34 @@
     const $ = id => document.getElementById(id);
     const board = $('board');
     const grid = $('grid');
+    const boardOverlay = $('boardOverlay');
     const colSlider = $('colSlider'), colNumber = $('colNumber');
     const rowSlider = $('rowSlider'), rowNumber = $('rowNumber');
     const gapSlider = $('gapSlider'), gapNumber = $('gapNumber');
     const radiusSlider = $('radiusSlider'), radiusNumber = $('radiusNumber');
     const marginSlider = $('marginSlider'), marginNumber = $('marginNumber');
     const bgPicker = $('bgColorPicker');
+    const offsetBtn = $('offsetBtn');
+    const offsetDirBtn = $('offsetDirBtn');
     const fmtSelect = $('formatSelect');
     const dlBtn = $('downloadBtn');
     const resetBtn = $('resetBtn');
     const loadingOverlay = $('loadingOverlay');
 
+    // Overlay controls
+    const logoUploadBtn = $('logoUploadBtn');
+    const logoInput = $('logoInput');
+    const overlayText = $('overlayText');
+    const overlayFontSize = $('overlayFontSize');
+    const overlayFontSizeNum = $('overlayFontSizeNum');
+    const overlayColor = $('overlayColor');
+    const overlayPosition = $('overlayPosition');
+
     let exportScale = 1;
-    let cellImages = {}; // store images by cell index
+    let cellImages = {};
+    let offsetOn = false;
+    let offsetDir = 'horizontal'; // 'horizontal' or 'vertical'
+    let logoDataURL = null;
 
     // --- Sync sliders ---
     function syncSlider(range, num, cb) {
@@ -400,6 +528,19 @@
       document.documentElement.style.setProperty('--board-bg', bgPicker.value);
     });
 
+    // --- Quinconce (offset) ---
+    offsetBtn.addEventListener('click', () => {
+      offsetOn = !offsetOn;
+      offsetBtn.textContent = offsetOn ? 'On' : 'Off';
+      offsetBtn.classList.toggle('active', offsetOn);
+      updateBoard();
+    });
+    offsetDirBtn.addEventListener('click', () => {
+      offsetDir = offsetDir === 'horizontal' ? 'vertical' : 'horizontal';
+      offsetDirBtn.textContent = offsetDir === 'horizontal' ? 'H' : 'V';
+      if (offsetOn) updateBoard();
+    });
+
     // --- Presets ---
     document.querySelectorAll('.preset-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -407,6 +548,9 @@
         btn.classList.add('active');
         const p = btn.dataset.preset;
         cellImages = {};
+        offsetOn = false;
+        offsetBtn.textContent = 'Off';
+        offsetBtn.classList.remove('active');
         switch(p) {
           case 'grid33': setSliders(3,3,12,12,12); break;
           case 'grid23': setSliders(2,3,12,12,12); break;
@@ -431,15 +575,18 @@
     }
 
     // --- Ratio buttons ---
-    // Remove duplicate 4:3 button
-    const ratioBtns = document.querySelectorAll('.ratio-btn');
-    ratioBtns.forEach((btn, i) => {
-      // Skip duplicate first 4:3
-      if (i === 0) { btn.remove(); return; }
+    document.querySelectorAll('.ratio-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.ratio-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        board.style.aspectRatio = btn.dataset.ratio;
+        const ratio = btn.dataset.ratio;
+        if (ratio === 'full') {
+          board.classList.add('full-height');
+          board.style.aspectRatio = '';
+        } else {
+          board.classList.remove('full-height');
+          board.style.aspectRatio = ratio;
+        }
       });
     });
 
@@ -451,6 +598,62 @@
         exportScale = +btn.dataset.scale;
       });
     });
+
+    // --- Overlay: logo ---
+    logoUploadBtn.addEventListener('click', () => {
+      if (logoDataURL) {
+        // Remove logo
+        logoDataURL = null;
+        logoUploadBtn.textContent = '+ Logo';
+        logoUploadBtn.classList.remove('active');
+        updateOverlay();
+      } else {
+        logoInput.click();
+      }
+    });
+    logoInput.addEventListener('change', () => {
+      const file = logoInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        logoDataURL = e.target.result;
+        logoUploadBtn.textContent = '✕ Logo';
+        logoUploadBtn.classList.add('active');
+        updateOverlay();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // --- Overlay: text & controls ---
+    overlayText.addEventListener('input', updateOverlay);
+    overlayColor.addEventListener('input', updateOverlay);
+    syncSlider(overlayFontSize, overlayFontSizeNum, updateOverlay);
+    overlayPosition.addEventListener('change', updateOverlay);
+
+    function updateOverlay() {
+      boardOverlay.innerHTML = '';
+      // Remove old position classes
+      boardOverlay.className = 'board-overlay';
+      boardOverlay.classList.add('pos-' + overlayPosition.value);
+
+      if (logoDataURL) {
+        const img = document.createElement('img');
+        img.src = logoDataURL;
+        img.className = 'overlay-logo';
+        boardOverlay.appendChild(img);
+      }
+
+      const txt = overlayText.value.trim();
+      if (txt) {
+        const span = document.createElement('span');
+        span.className = 'overlay-text';
+        span.textContent = txt;
+        span.style.fontSize = overlayFontSize.value + 'px';
+        span.style.color = overlayColor.value;
+        span.style.textShadow = '0 1px 4px rgba(0,0,0,0.4)';
+        boardOverlay.appendChild(span);
+      }
+    }
 
     // --- Save/restore cell images ---
     function saveCellImages() {
@@ -491,20 +694,50 @@
       });
     }
 
-    // --- Create grid ---
+    // --- Create grid with quinconce support ---
     function createGrid() {
       grid.innerHTML = '';
       const cols = +colSlider.value;
       const rows = +rowSlider.value;
+      let cellIdx = 0;
 
-      grid.style.flexDirection = 'column';
-      for (let r = 0; r < rows; r++) {
-        const row = document.createElement('div');
-        row.className = 'grid-row';
+      if (offsetOn && offsetDir === 'vertical') {
+        // Vertical quinconce: columns with different row counts
+        grid.style.flexDirection = 'row';
         for (let c = 0; c < cols; c++) {
-          createCell(row, r * cols + c);
+          const col = document.createElement('div');
+          col.className = 'grid-column';
+          let count = rows;
+          if (c % 2 === 1) count = Math.max(1, rows - 1);
+          for (let i = 0; i < count; i++) {
+            createCell(col, cellIdx++);
+          }
+          grid.append(col);
         }
-        grid.append(row);
+      } else if (offsetOn && offsetDir === 'horizontal') {
+        // Horizontal quinconce: rows with different col counts
+        grid.style.flexDirection = 'column';
+        for (let r = 0; r < rows; r++) {
+          const row = document.createElement('div');
+          row.className = 'grid-row';
+          let count = cols;
+          if (r % 2 === 1) count = Math.max(1, cols - 1);
+          for (let c = 0; c < count; c++) {
+            createCell(row, cellIdx++);
+          }
+          grid.append(row);
+        }
+      } else {
+        // Standard grid
+        grid.style.flexDirection = 'column';
+        for (let r = 0; r < rows; r++) {
+          const row = document.createElement('div');
+          row.className = 'grid-row';
+          for (let c = 0; c < cols; c++) {
+            createCell(row, cellIdx++);
+          }
+          grid.append(row);
+        }
       }
       restoreCellImages();
     }
@@ -676,8 +909,24 @@
       bgPicker.value = '#ffffff';
       document.documentElement.style.setProperty('--board-bg', '#ffffff');
       board.style.aspectRatio = '4/3';
+      board.classList.remove('full-height');
+      offsetOn = false;
+      offsetBtn.textContent = 'Off';
+      offsetBtn.classList.remove('active');
+      offsetDir = 'horizontal';
+      offsetDirBtn.textContent = 'H';
+      logoDataURL = null;
+      logoUploadBtn.textContent = '+ Logo';
+      logoUploadBtn.classList.remove('active');
+      logoInput.value = '';
+      overlayText.value = '';
+      overlayFontSize.value = overlayFontSizeNum.value = 24;
+      overlayColor.value = '#ffffff';
+      overlayPosition.value = 'bottom-center';
+      updateOverlay();
       document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.ratio-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector('.ratio-btn[data-ratio="4/3"]').classList.add('active');
       updateBoard();
     });
 
@@ -721,6 +970,7 @@
 
     // Init
     updateBoard();
+    updateOverlay();
   })();
   </script>
 </body>
